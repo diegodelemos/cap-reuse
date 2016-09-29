@@ -1,0 +1,28 @@
+version: '2'
+services:
+  rabbit:
+    build: rabbit
+    command: /start.sh test 1234
+    ports:
+     - "5672:5672"
+     - "15672:15672"
+  web:
+    build: web
+    command: python app.py
+    depends_on:
+     - rabbit
+    links:
+     - rabbit:rabbit
+    ports:
+     - "80:5000"
+    volumes:
+     - ./web:/web
+  worker:
+    build: worker
+    command: celery -A worker worker -l info
+    depends_on:
+     - rabbit
+    links:
+     - rabbit:rabbit
+    volumes:
+     - ./worker:/workdir/worker
