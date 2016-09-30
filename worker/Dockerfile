@@ -6,3 +6,4 @@ WORKDIR /workdir
 RUN adduser --uid 1000 --disabled-password --gecos '' rodrigdi && \
     chown -R rodrigdi:rodrigdi /workdir
 USER rodrigdi
+CMD ["celery", "-A", "worker", "worker", "-l", "info"]

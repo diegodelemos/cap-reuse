@@ -6,3 +6,5 @@ WORKDIR /web
 RUN adduser --uid 1000 --disabled-password --gecos '' rodrigdi && \
     chown -R rodrigdi:rodrigdi /web
 USER rodrigdi
+EXPOSE 5000
+CMD ["python", "app.py"]

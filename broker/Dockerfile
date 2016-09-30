@@ -10,3 +10,6 @@ RUN chmod 755 ./start.sh
 #RUN rabbitmqctl add_vhost vhost
 #RUN rabbitmqctl set_user_tags test test-tag
 #RUN rabbitmqctl set_permissions -p myvhost myuser ".*" ".*" ".*"
+EXPOSE 5672
+EXPOSE 15672
+CMD ["/start.sh", "test", "1234"]
