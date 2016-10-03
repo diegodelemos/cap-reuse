@@ -15,4 +15,4 @@ def fib():
 def fibonacci(number):
     for index, fibonacci_number in enumerate(fib()):
         if index == number:
-            fibonacci_number
+            return fibonacci_number
