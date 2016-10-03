@@ -1,18 +1,16 @@
 apiVersion: v1  
-kind: ReplicationController  
+kind: ReplicationController
 metadata:  
   name: broker
 spec:  
   replicas: 1
-  selector:
-    app: broker
   template:
     metadata:
       labels:
         app: broker
     spec:
       containers:
-       - name: broker
+       - name: rabbitmq
          image: diegodelemos/capreuse_broker:latest
          ports:
           - containerPort: 5672 

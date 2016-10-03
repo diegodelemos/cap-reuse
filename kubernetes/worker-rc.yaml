@@ -3,14 +3,12 @@ kind: ReplicationController
 metadata:
   name: worker
 spec:
-  replicas: 2
-  selector:
-    app: worker
+  replicas: 3
   template:
     metadata:
       labels:
         app: worker
     spec:
       containers:
-       - name: worker
+       - name: celery-worker
          image: diegodelemos/capreuse_worker:latest

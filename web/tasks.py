@@ -5,6 +5,9 @@ from celery import Celery
 celery = Celery('tasks',
                 broker='amqp://test:1234@broker-service//')
 
+celery.conf.update(CELERY_ACCEPT_CONTENT = ['json'],
+                   CELERY_TASK_SERIALIZER = 'json')
+
 
 # https://www.python.org/dev/peps/pep-0255/
 def fib():

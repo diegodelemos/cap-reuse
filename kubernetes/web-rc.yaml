@@ -1,18 +1,16 @@
-apiVersion: v1  
-kind: ReplicationController  
-metadata:  
+apiVersion: v1
+kind: ReplicationController
+metadata:
   name: web
-spec:  
+spec:
   replicas: 1
-  selector:
-    app: web
   template:
     metadata:
       labels:
         app: web
     spec:
       containers:
-       - name: web
+       - name: flask
          image: diegodelemos/capreuse_web
          ports:
           - containerPort: 5000 
