@@ -3,7 +3,7 @@ from flask import Flask
 from celery import Celery
 
 app = Celery('tasks',
-             broker='amqp://test:1234@broker//',
+             broker='amqp://test:1234@broker-service//',
              include=['worker.tasks'])
 
 if __name__ == '__main__':

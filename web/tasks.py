@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from celery import Celery
 
 celery = Celery('tasks',
-                broker='amqp://test:1234@broker//')
+                broker='amqp://test:1234@broker-service//')
 
 
 # https://www.python.org/dev/peps/pep-0255/
