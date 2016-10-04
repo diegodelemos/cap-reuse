@@ -12,7 +12,11 @@ def fib():
 
 
 @app.task(name='tasks.fibonacci')
-def fibonacci(number):
+def fibonacci(number, experiment):
+    print 'Executing fibonacci for {0} on {1} infrastructure'.format(
+        number,
+        experiment
+    )
     for index, fibonacci_number in enumerate(fib()):
         if index == number:
             return fibonacci_number

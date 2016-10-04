@@ -5,8 +5,8 @@ from celery import Celery
 celery = Celery('tasks',
                 broker='amqp://test:1234@broker-service//')
 
-celery.conf.update(CELERY_ACCEPT_CONTENT = ['json'],
-                   CELERY_TASK_SERIALIZER = 'json')
+celery.conf.update(CELERY_ACCEPT_CONTENT=['json'],
+                   CELERY_TASK_SERIALIZER='json')
 
 
 # https://www.python.org/dev/peps/pep-0255/
@@ -18,7 +18,11 @@ def fib():
 
 
 @celery.task(name='tasks.fibonacci')
-def fibonacci(number):
+def fibonacci(number, experiment):
+    print 'Executing fibonacci for {0} on {1} infrastructure'.format(
+        number,
+        experiment
+    )
     for index, fibonacci_number in enumerate(fib()):
         if index == number:
             return fibonacci_number

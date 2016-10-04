@@ -8,8 +8,19 @@
     <p style="color: red;">{{ message }}</p>
     {% endfor %}
     <form method="POST">
-      <p>Calculate fibonacci for: <input type="number" name="number"></p>
-      <input type="submit" name="submit" value="Submit">
+      <p>
+        Calculate fibonacci for: <input type="number" name="number" required>
+        &nbsp;
+        Experiment:
+        <select name="experiment" required>
+          <option value="alice">ALICE</option>
+          <option value="atlas">ATLAS</option>
+          <option value="cms">CMS</option>
+          <option value="lhcb">LHCb</option>
+        </select>
+        &nbsp;
+        <input type="submit" name="submit" value="Submit">
+      </p>
     </form>
   </body>
 </html>
