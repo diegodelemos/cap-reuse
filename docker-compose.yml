@@ -21,7 +21,7 @@ services:
     build: worker
     command: celery -A worker worker -l info
     depends_on:
-     - rabbit
+     - broker
     links:
      - broker:broker
     volumes:
