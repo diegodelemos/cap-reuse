@@ -7,6 +7,14 @@ from tasks import fibonacci
 app = Flask(__name__)
 app.secret_key = "super secret key"
 
+experiment_to_queue = {
+    'alice': 'alice-queue',
+    'atlas': 'atlas-queue',
+    'lhcb': 'lhcb-queue',
+    'cms': 'cms-queue',
+    'recast': 'recast-queue'
+}
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -14,13 +22,24 @@ def index():
         return render_template('bg-form.html')
 
     # Calculate fibonacci in background
-    if request.form['submit'] == 'Submit':
+    if request.method == 'POST':
         try:
-            number = int(request.form['number'])
-            experiment = request.form['experiment']
+            docker_img = request.form['docker-img']
+            task_weight = request.form['weight']
+            queue = experiment_to_queue[request.form['experiment']]
+            input_file = request.form['input-file']
             # send right away
-            fibonacci.apply_async(args=[number, experiment])
-            flash('Calculating fibonacci for {0}.'.format(number))
+            fibonacci.apply_async(
+                args=[docker_img, task_weight, input_file],
+                queue=queue
+            )
+            flash(
+                'Running docker image {0} with weight {1} and the \
+                following input file on {2}: {3}'.format(
+                    docker_img, task_weight, request.form['experiment'],
+                    input_file
+                )
+            )
             return redirect(url_for('index'))
         except (KeyError, ValueError):
             abort(400)

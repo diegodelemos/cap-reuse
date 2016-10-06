@@ -9,20 +9,12 @@ celery.conf.update(CELERY_ACCEPT_CONTENT=['json'],
                    CELERY_TASK_SERIALIZER='json')
 
 
-# https://www.python.org/dev/peps/pep-0255/
-def fib():
-    a, b = 0, 1
-    while True:
-        yield a
-        a, b = b, a + b
-
-
 @celery.task(name='tasks.fibonacci')
-def fibonacci(number, experiment):
-    print 'Executing fibonacci for {0} on {1} infrastructure'.format(
-        number,
-        experiment
+def fibonacci(docker_img, task_weight, input_file):
+    print 'Running docker image {0} with weight {1} and the \
+    following input file on {2}'.format(
+        docker_img, task_weight, input_file
     )
-    for index, fibonacci_number in enumerate(fib()):
-        if index == number:
-            return fibonacci_number
+
+    # Call Kubernetes API to run docker img and transfer input file to the
+    # volume it is going to use.

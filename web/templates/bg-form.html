@@ -8,8 +8,18 @@
     <p style="color: red;">{{ message }}</p>
     {% endfor %}
     <form method="POST">
-      <p>
-        Calculate fibonacci for: <input type="number" name="number" required>
+      <div>
+        Docker image name: <input type="text" name="docker-img" required>
+        &nbsp;
+        |
+        &nbsp;
+        Weight:
+        <select name="weight" required>
+          <option value="slow">Slow</option>
+          <option value="fast">Fast</option>
+        </select>
+        &nbsp;        
+        |
         &nbsp;
         Experiment:
         <select name="experiment" required>
@@ -17,10 +27,16 @@
           <option value="atlas">ATLAS</option>
           <option value="cms">CMS</option>
           <option value="lhcb">LHCb</option>
+          <option value="recast">Recast</option>
         </select>
-        &nbsp;
-        <input type="submit" name="submit" value="Submit">
-      </p>
+      </div>
+      <div>
+        <p>Copy the input file here:</p>
+        <textarea name="input-file" rows="25" cols="113" required></textarea>
+      </div>
+      <div>
+        <input type="submit" value="Execute">
+      </div>
     </form>
   </body>
 </html>

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: alice-worker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: alice-worker
+    spec:
+      containers:
+       - name: celery-worker
+         image: diegodelemos/capreuse_worker:latest
+         env:
+          - name: QUEUE_ENV
+            value: alice-queue
