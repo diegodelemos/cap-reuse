@@ -1,4 +1,4 @@
 FROM python:2.7
 COPY fibo.py /fibo.py
-COPY data/input.dat /data/input.dat
+RUN mkdir /data
 CMD ["python", "/fibo.py"]

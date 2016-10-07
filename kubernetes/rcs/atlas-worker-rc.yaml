@@ -10,8 +10,16 @@ spec:
         app: atlas-worker
     spec:
       containers:
-       - name: celery-worker
-         image: diegodelemos/capreuse_worker:latest
+       - name: atlas-celery-worker
+         image: diegodelemos/capreuse_worker:kjobs
          env:
           - name: QUEUE_ENV
             value: atlas-queue
+         volumeMounts:
+          - name: cap-pv
+            readOnly: false
+            mountPath: "/data"
+      volumes:
+      - name: cap-pv
+        hostPath:
+          path: "/data"

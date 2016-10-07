@@ -1,0 +1,24 @@
+---
+kind: Job
+apiVersion: extensions/v1beta1
+metadata:
+  name: recast-job
+spec:
+  autoSelector: true
+  template:
+    metadata:
+      name: recast-job
+    spec:
+      containers:
+      - name: capreuse-fibonacci
+        image: diegodelemos/capreuse_fibonacci
+        volumeMounts:
+        - name: recast-pv
+          readOnly: false
+          mountPath: "/data"
+      volumes:
+      - name: recast-pv
+        hostPath:
+          path: "/data"
+      restartPolicy: Never
+
