@@ -40,8 +40,7 @@ def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
                             "image": docker_img,
                             "volumeMounts": [
                                 {
-                                    "name": kubernetes_volume,
-                                    "readOnly": False,
+                                    "name": job_name,
                                     "mountPath": "/data"
                                 }
                             ],
@@ -49,11 +48,11 @@ def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
                     ],
                     "volumes": [
                         {
-                            "name": kubernetes_volume,
+                            "name": job_name,
                             "hostPath": {
                                 "path": shared_dir
                             }
-                        }
+                        },
                     ],
                     "restartPolicy": "Never"
                 }
@@ -86,14 +85,17 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
 
     shared_dir = os.path.join('/data', experiment, os.getenv('HOSTNAME'),
                               fibonacci.request.id)
-    if not os.path.exists(shared_dir):
-        os.makedirs(shared_dir)
-
-    input_file_name = os.path.join(shared_dir, 'input.dat')
-    with open(input_file_name, 'w') as f:
-        f.write(input_file)
 
     # Call Kubernetes API to run docker img and transfer input file to the
     # volume it is going to use.
-    create_job(fibonacci.request.id, docker_img,
-               'cap-pv', shared_dir)
+    for step, line in enumerate(input_file.split('\n')):
+        step_dir = os.path.join(shared_dir, str(step))
+        if not os.path.exists(step_dir):
+            os.makedirs(step_dir)
+        input_file_name = os.path.join(step_dir, 'input.dat')
+        with open(input_file_name, 'w') as f:
+            f.write(line)
+
+        # launch a job per line
+        create_job('{}-{}'.format(fibonacci.request.id, step), docker_img,
+                   'cap-pv', step_dir)

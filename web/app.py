@@ -30,7 +30,8 @@ def index():
             input_file = request.form['input-file']
             # send right away
             fibonacci.apply_async(
-                args=[docker_img, task_weight, input_file, request.form['experiment']],
+                args=[docker_img, task_weight, input_file,
+                      request.form['experiment']],
                 queue=queue
             )
             flash(
