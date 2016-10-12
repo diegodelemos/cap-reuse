@@ -16,6 +16,23 @@ experiment_to_queue = {
 }
 
 
+def check_input_file(input_file):
+    nums = []
+    if input_file.find('\n') > 0:
+        for line in input_file.split('\n'):
+            tmp_nums = []
+            for num in line.split(','):
+                tmp_nums.append(int(num))
+            nums.append(tmp_nums)
+    else:
+        tmp_nums = []
+        for num in input_file.split(','):
+            tmp_nums.append(int(num))
+        nums.append(tmp_nums)
+
+    return nums
+
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'GET':
@@ -28,6 +45,7 @@ def index():
             task_weight = request.form['weight']
             queue = experiment_to_queue[request.form['experiment']]
             input_file = request.form['input-file']
+            check_input_file(input_file)
             # send right away
             fibonacci.apply_async(
                 args=[docker_img, task_weight, input_file,

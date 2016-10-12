@@ -17,10 +17,13 @@ TOKEN_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/token'
 with open(TOKEN_PATH) as tf:
     TOKEN = tf.read()
 
-CREATE_JOB_ENDPOINT = '/apis/extensions/v1beta1/namespaces/default/jobs'
+
+def job_endpoint(namespace='default'):
+    return '/apis/extensions/v1beta1/namespaces/{ns}/jobs'.format(ns=namespace)
 
 
-def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
+def create_job(job_name, docker_img, kubernetes_volume, shared_dir,
+               experiment):
     job_description = {
         "kind": "Job",
         "apiVersion": "extensions/v1beta1",
@@ -61,7 +64,7 @@ def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
     }
 
     response = requests.post('{}{}'.format('https://kubernetes',
-                                           CREATE_JOB_ENDPOINT),
+                                           job_endpoint(experiment)),
                              json=job_description,
                              headers={'Authorization': 'Bearer {}'.format(
                                  TOKEN
@@ -86,6 +89,7 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
     shared_dir = os.path.join('/data', experiment, os.getenv('HOSTNAME'),
                               fibonacci.request.id)
 
+    jobs_ids = []
     # Call Kubernetes API to run docker img and transfer input file to the
     # volume it is going to use.
     for step, line in enumerate(input_file.split('\n')):
@@ -96,6 +100,7 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
         with open(input_file_name, 'w') as f:
             f.write(line)
 
+        job_name = '{}-{}'.format(fibonacci.request.id, step)
+        jobs_ids.append(job_name)
         # launch a job per line
-        create_job('{}-{}'.format(fibonacci.request.id, step), docker_img,
-                   'cap-pv', step_dir)
+        create_job(job_name, docker_img, 'cap-claim', step_dir, experiment)
