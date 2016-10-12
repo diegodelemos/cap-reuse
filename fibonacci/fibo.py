@@ -1,3 +1,6 @@
+import os
+import random
+
 # https://www.python.org/dev/peps/pep-0255/
 def fib():
     a, b = 0, 1
@@ -13,6 +16,10 @@ def fibonacci(number):
 
 
 def fibo_file(input_file, output_file):
+    if os.getenv('RANDOM_ERROR', False) and \
+       random.randint(0, 10) < 2:
+        raise ArithmeticError
+
     number_list = []
     with open(input_file, 'r') as f:
         number_list = [int(i) for i in f.read().split(',')]

@@ -15,6 +15,8 @@ spec:
          env:
           - name: QUEUE_ENV
             value: recast-queue
+          - name: EXPERIMENT
+            value: recast
          volumeMounts:
           - name: cap-pv
             mountPath: "/data"

@@ -15,6 +15,8 @@ spec:
          env:
           - name: QUEUE_ENV
             value: cms-queue
+          - name: EXPERIMENT
+            value: cms
          volumeMounts:
           - name: cap-pv
             readOnly: false
