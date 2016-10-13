@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import json
 import os
+import time
 import requests
 from worker.celery import app
 
@@ -25,28 +26,36 @@ def get_job_state(job_id):
 
     if response.ok:
         res_dict = json.loads(response.text)
-        print res_dict
-        if not (res_dict['status'].get('succeeded', False) or
-                res_dict['status'].get('failed', False)):
-            response = requests.get(
-                '{}{}?name={}&watch=true&timeoutSeconds=10'.
-                format('https://kubernetes',
-                       ENDPOINT, job_id),
-                headers={'Authorization': 'Bearer {}'
-                         .format(
-                             TOKEN
-                         )},
-                verify=CA_CERT_PATH)
-            res_dict = json.loads(response.text)
+        print res_dict['metadata']['resourceVersion']
+        while not (res_dict['status'].get('succeeded', False) or
+                   res_dict['status'].get('failed', False)):
+            time.sleep(10)
+            response = requests.get('{}{}/{}'.format('https://kubernetes',
+                                                     ENDPOINT, job_id),
+                                    headers={'Authorization': 'Bearer {}'.
+                                             format(
+                                                 TOKEN
+                                             )},
+                                    verify=CA_CERT_PATH)
+
+            if response.ok:
+                res_dict = json.loads(response.text)
+            else:
+                break
 
         if res_dict['status'].get('succeeded', False):
             return True
+        elif res_dict['status'].get('failed', False):
+            return False
         else:
+            print 'Error while calling Kubernetes API'
+            print response.text
             return False
 
     else:
         print 'Error while calling Kubernetes API'
         print response.text
+        return False
 
 
 def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
@@ -73,7 +82,7 @@ def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
                                     "mountPath": "/data"
                                 }
                             ]
-                        }
+                        },
                     ],
                     "volumes": [
                         {

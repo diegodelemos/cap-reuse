@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
        - name: atlas-celery-worker
-         image: diegodelemos/capreuse_worker:kjobs
+         image: diegodelemos/capreuse_worker:latest
          env:
           - name: QUEUE_ENV
             value: atlas-queue
