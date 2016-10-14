@@ -26,22 +26,24 @@ def get_job_state(job_id):
 
     if response.ok:
         res_dict = json.loads(response.text)
-        print res_dict['metadata']['resourceVersion']
         while not (res_dict['status'].get('succeeded', False) or
                    res_dict['status'].get('failed', False)):
-            time.sleep(10)
-            response = requests.get('{}{}/{}'.format('https://kubernetes',
-                                                     ENDPOINT, job_id),
+            response = requests.get('{}{}'.format('https://kubernetes',
+                                                  ENDPOINT),
+                                    params={'watch': 'true'},
                                     headers={'Authorization': 'Bearer {}'.
                                              format(
                                                  TOKEN
                                              )},
-                                    verify=CA_CERT_PATH)
+                                    verify=CA_CERT_PATH,
+                                    stream=True)
 
-            if response.ok:
-                res_dict = json.loads(response.text)
-            else:
-                break
+            # make tests becuse it was working on the command line but not here...
+            for line in response.iter_lines():
+                object = json.loads(line.decode('UTF-8')).get('object', None)
+                if object and object['metadata']['name'] == job_id:
+                    res_dict = object
+                    break
 
         if res_dict['status'].get('succeeded', False):
             return True
@@ -146,4 +148,4 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
 
     with open(os.path.join(shared_dir, 'workflow_result.dat'), 'w') as f:
         for job, success in results.iteritems():
-            f.write('Job {} ---> succeeded: {}'.format(job, success))
+            f.write('Job {} ---> succeeded: {}\n'.format(job, success))
