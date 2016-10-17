@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 import json
 import os
-import time
 import requests
 from worker.celery import app
 
@@ -17,47 +16,33 @@ ENDPOINT = '/apis/extensions/v1beta1/namespaces/{ns}/jobs'.format(
 
 
 def get_job_state(job_id):
-    response = requests.get('{}{}/{}'.format('https://kubernetes',
-                                             ENDPOINT, job_id),
-                            headers={'Authorization': 'Bearer {}'.format(
-                                TOKEN
-                            )},
-                            verify=CA_CERT_PATH)
+    while True:
+        response = requests.get('{}{}'.format('https://kubernetes',
+                                              ENDPOINT),
+                                params={'watch': 'true'},
+                                headers={'Authorization': 'Bearer {}'.
+                                         format(
+                                             TOKEN
+                                         )},
+                                verify=CA_CERT_PATH,
+                                stream=True)
 
-    if response.ok:
-        res_dict = json.loads(response.text)
-        while not (res_dict['status'].get('succeeded', False) or
-                   res_dict['status'].get('failed', False)):
-            response = requests.get('{}{}'.format('https://kubernetes',
-                                                  ENDPOINT),
-                                    params={'watch': 'true'},
-                                    headers={'Authorization': 'Bearer {}'.
-                                             format(
-                                                 TOKEN
-                                             )},
-                                    verify=CA_CERT_PATH,
-                                    stream=True)
-
-            # make tests becuse it was working on the command line but not here...
+        if response.ok:
             for line in response.iter_lines():
-                object = json.loads(line.decode('UTF-8')).get('object', None)
-                if object and object['metadata']['name'] == job_id:
+                object = json.loads(line.decode('UTF-8')).get('object')
+                if (object['metadata']['name'] == job_id
+                    and (object['status'].get('succeeded')
+                         or object['status'].get('failed'))):
                     res_dict = object
-                    break
+                    if res_dict['status'].get('succeeded'):
+                        return True
+                    elif res_dict['status'].get('failed'):
+                        return False
 
-        if res_dict['status'].get('succeeded', False):
-            return True
-        elif res_dict['status'].get('failed', False):
-            return False
         else:
-            print 'Error while calling Kubernetes API'
+            print 'Error while calling the stream API'
             print response.text
             return False
-
-    else:
-        print 'Error while calling Kubernetes API'
-        print response.text
-        return False
 
 
 def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
@@ -78,6 +63,12 @@ def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
                         {
                             "name": job_name,
                             "image": docker_img,
+                            "env": [
+                                {
+                                    "name": "RANDOM_ERROR",
+                                    "value": "1"
+                                }
+                            ],
                             "volumeMounts": [
                                 {
                                     "name": job_name,
