@@ -1,4 +1,6 @@
 from __future__ import absolute_import
+import base64
+import json
 from flask import (Flask, abort, flash, redirect, render_template,
                    request, url_for)
 from tasks import fibonacci
@@ -41,25 +43,39 @@ def index():
     # Calculate fibonacci in background
     if request.method == 'POST':
         try:
-            docker_img = request.form['docker-img']
-            task_weight = request.form['weight']
-            queue = experiment_to_queue[request.form['experiment']]
-            input_file = request.form['input-file']
-            check_input_file(input_file)
-            # send right away
-            fibonacci.apply_async(
-                args=[docker_img, task_weight, input_file,
-                      request.form['experiment']],
-                queue=queue
-            )
-            flash(
-                'Running docker image {0} with weight {1} and the \
-                following input file on {2}: {3}'.format(
-                    docker_img, task_weight, request.form['experiment'],
-                    input_file
+            if request.json:
+                data = json.loads(request.json)
+                docker_img = data['docker-img']
+                task_weight = data['weight']
+                experiment = data['experiment']
+                input_file = base64.decodestring(data['input-file'])
+                check_input_file(input_file)
+                # send right away
+                fibonacci.apply_async(
+                    args=[docker_img, task_weight, input_file, experiment],
+                    queue=experiment_to_queue[experiment]
                 )
-            )
-            return redirect(url_for('index'))
+                return 'Success'
+            else:
+                docker_img = request.form['docker-img']
+                task_weight = request.form['weight']
+                queue = experiment_to_queue[request.form['experiment']]
+                input_file = request.form['input-file']
+                check_input_file(input_file)
+                # send right away
+                fibonacci.apply_async(
+                    args=[docker_img, task_weight, input_file,
+                          request.form['experiment']],
+                    queue=queue
+                )
+                flash(
+                    'Running docker image {0} with weight {1} and the \
+                    following input file on {2}: {3}'.format(
+                        docker_img, task_weight, request.form['experiment'],
+                        input_file
+                    )
+                )
+                return redirect(url_for('index'))
         except (KeyError, ValueError):
             abort(400)
 
