@@ -15,36 +15,50 @@ ENDPOINT = '/apis/extensions/v1beta1/namespaces/{ns}/jobs'.format(
 )
 
 
-def get_job_state(job_id):
+@app.task
+def get_job_state(job_list):
+    jobs_status_dict = dict([(job_id, None) for job_id in job_list])
     while True:
-        response = requests.get('{}{}'.format('https://kubernetes',
-                                              ENDPOINT),
-                                params={'watch': 'true'},
-                                headers={'Authorization': 'Bearer {}'.
-                                         format(
-                                             TOKEN
-                                         )},
-                                verify=CA_CERT_PATH,
-                                stream=True)
+        try:
+            response = requests.get('{}{}'.format('https://kubernetes',
+                                                  ENDPOINT),
+                                    params={'watch': 'true'},
+                                    headers={'Authorization': 'Bearer {}'.
+                                             format(
+                                                 TOKEN
+                                             )},
+                                    verify=CA_CERT_PATH,
+                                    stream=True,
+                                    timeout=10)
 
-        if response.ok:
-            for line in response.iter_lines():
-                object = json.loads(line.decode('UTF-8')).get('object')
-                if (object['metadata']['name'] == job_id
-                    and (object['status'].get('succeeded')
-                         or object['status'].get('failed'))):
-                    res_dict = object
-                    if res_dict['status'].get('succeeded'):
-                        return True
-                    elif res_dict['status'].get('failed'):
-                        return False
+            if response.ok:
+                for line in response.iter_lines():
+                    object = json.loads(line.decode('UTF-8')).get('object')
+                    if (object['metadata']['name'] in job_list
+                        and (object['status'].get('succeeded')
+                             or object['status'].get('failed'))):
+                        job_id = object['metadata']['name']
+                        del(job_list[job_list.index(job_id)])
+                        if object['status'].get('succeeded'):
+                            jobs_status_dict[job_id] = True
+                        else:
+                            jobs_status_dict[job_id] = False
 
-        else:
-            print 'Error while calling the stream API'
-            print response.text
+                        if not job_list:
+                            return jobs_status_dict
+
+        except requests.exceptions.ConnectionError, e:
+            if 'Read timed out.' in str(e):
+                print 'Connection timed out. Retrying...'
+                continue
+            else:
+                return False
+
+        except Exception, e:
             return False
 
 
+@app.task(ignore_result=True)
 def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
     job_description = {
         "kind": "Job",
@@ -106,7 +120,7 @@ def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
         print response.text
 
 
-@app.task(name='tasks.fibonacci')
+@app.task(name='tasks.fibonacci', ignore_result=True)
 def fibonacci(docker_img, task_weight, input_file, experiment):
     print 'Running docker image {0} with weight {1} and the \
     following input file on {3}: {2}'.format(
@@ -117,7 +131,7 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
                               os.getenv('HOSTNAME'),
                               fibonacci.request.id)
 
-    jobs_ids = []
+    jobs_list = []
     # Call Kubernetes API to run docker img and transfer input file to the
     # volume it is going to use.
     for step, line in enumerate(input_file.split('\n')):
@@ -129,13 +143,11 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
             f.write(line)
 
         job_name = '{}-{}'.format(fibonacci.request.id, step)
-        jobs_ids.append(job_name)
+        jobs_list .append(job_name)
         # launch a job per line
         create_job(job_name, docker_img, 'cap-claim', step_dir)
 
-    results = {}
-    for job in jobs_ids:
-        results[job] = get_job_state(job)
+    results = get_job_state(jobs_list)
 
     with open(os.path.join(shared_dir, 'workflow_result.dat'), 'w') as f:
         for job, success in results.iteritems():
