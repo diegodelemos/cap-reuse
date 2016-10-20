@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: step-broker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: step-broker
+    spec:
+      containers:
+       - name: step-broker
+         image: diegodelemos/capreuse_step-broker:latest
+         ports:
+          - containerPort: 5000 
+            name: "http"
