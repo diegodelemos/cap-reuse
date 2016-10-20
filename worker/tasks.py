@@ -122,10 +122,13 @@ def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
 
 @app.task(name='tasks.fibonacci', ignore_result=True)
 def fibonacci(docker_img, task_weight, input_file, experiment):
-    print 'Running docker image {0} with weight {1} and the \
-    following input file on {3}: {2}'.format(
-        docker_img, task_weight, input_file, os.getenv('EXPERIMENT')
-    )
+    print '\nRunning the following workflow:\n'\
+          'Docker image: {0}\n'\
+          'Weight: {1}\n'\
+          'Infraestructure: {3}\n'\
+          'Workflow steps:\n{2}'.format(
+              docker_img, task_weight, input_file, os.getenv('EXPERIMENT')
+          )
 
     shared_dir = os.path.join('/data', os.getenv('EXPERIMENT'),
                               os.getenv('HOSTNAME'),
