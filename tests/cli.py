@@ -6,7 +6,7 @@ import requests
 
 
 @click.command('fibo-experiment')
-@click.option('--url', default='http://192.168.99.100:32313/',
+@click.option('--url', default='http://137.138.7.117:30261/',
               help='API endpoint')
 @click.option('-d', '--docker-img', default='diegodelemos/capreuse_fibonacci',
               help='Docker image')

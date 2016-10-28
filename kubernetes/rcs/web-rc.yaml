@@ -15,10 +15,4 @@ spec:
          ports:
           - containerPort: 5000 
             name: "http"
-         volumeMounts:
-          - name: cap-pv
-            mountPath: "/data"
-      volumes:
-       - name: cap-pv
-         persistentVolumeClaim:
-           claimName: cap-claim
+         imagePullPolicy: Always

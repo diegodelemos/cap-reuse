@@ -6,7 +6,7 @@ WORKDIR /workdir
 RUN mkdir /data
 ARG QUEUE_ENV=default
 ENV QUEUE_ENV ${QUEUE_ENV}
-RUN adduser --uid 1000 --disabled-password --gecos '' rodrigdi && \
-    chown -R rodrigdi:rodrigdi /workdir /data
+RUN adduser --uid 1000 --disabled-password --gecos '' capreuse && \
+    chown -R capreuse:capreuse /workdir /data
 USER rodrigdi
 CMD celery -A worker worker -l info -Q ${QUEUE_ENV}
