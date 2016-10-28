@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
        - name: alice-celery-worker
-         image: diegodelemos/capreuse_worker:latest
+         image: diegodelemos/capreuse_worker:v0.1.0
          env:
           - name: QUEUE_ENV
             value: alice-queue

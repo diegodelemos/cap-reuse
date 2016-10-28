@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
        - name: flower
-         image: diegodelemos/capreuse_flower
+         image: diegodelemos/capreuse_flower:v0.1.0
          ports:
           - containerPort: 5555 
             name: "http"
