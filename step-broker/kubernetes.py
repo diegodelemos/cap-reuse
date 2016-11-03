@@ -54,7 +54,12 @@ def create_job(job_name, docker_img, work_dir):
         }
     }
 
-    return pykube.Job(api, job).create()
+    # add better handling
+    try:
+        pykube.Job(api, job).create()
+        return True
+    except pykube.exceptions.HTTPError:
+        return False
 
 
 def watch_jobs(job_db):
@@ -63,5 +68,20 @@ def watch_jobs(job_db):
         for line in stream:
             job = line[1].obj
             if job['metadata']['name'] in job_db:
-                job_db[job['metadata']['name']] = job['status']
-                print(job_db[job['metadata']['name']])
+                if job['status'].get('succeeded'):
+                    job_db[job['metadata']['name']]['status'] = 'succeeded'
+                if job['status'].get('failed'):
+                    job_db[job['metadata']['name']]['status'] = 'failed'
+
+
+def watch_pods(job_db):
+    while True:
+        stream = pykube.Pod.objects(api).filter(namespace=pykube.all).watch()
+        for line in stream:
+            pod = line[1].obj
+            print(pod)
+            # get job name with the API
+            # pod['metadata']['annotations']['kubernetes.io/created-by']['reference']['name']
+            job_name = '-'.join(pod['metadata']['name'].split('-')[:-1])
+            if job_name in job_db:
+                print(pod)

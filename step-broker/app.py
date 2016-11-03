@@ -9,6 +9,11 @@ JOB_DB = {}
 
 @app.route('/api/v1.0/jobs', methods=['GET'])
 def get_jobs():
+    return jsonify({"jobs": JOB_DB}), 200
+
+
+@app.route('/api/v1.0/k8sjobs', methods=['GET'])
+def get_k8sjobs():
     return jsonify({"jobs": kubernetes.get_jobs()}), 200
 
 
@@ -20,12 +25,16 @@ def create_job():
        or not ('docker-img' in request.json):
         abort(400)
 
-    job = kubernetes.create_job(request.json['job-name'],
-                                request.json['docker-img'],
-                                request.json['work-dir'])
-
-    JOB_DB[request.json['job-name']] = 'started'
-    return jsonify({'job': job}), 201
+    ok = kubernetes.create_job(request.json['job-name'],
+                               request.json['docker-img'],
+                               request.json['work-dir'])
+    if ok:
+        job = request.json
+        job['status'] = 'started'
+        JOB_DB[job.get('job-name')] = job
+        return jsonify({'job': request.json}), 201
+    else:
+        return jsonify({'job': 'failed'}), 500
 
 
 @app.route('/api/v1.0/jobs/watch/<job_id>', methods=['GET'])
@@ -37,7 +46,11 @@ def get_job(job_id):
 
 
 if __name__ == '__main__':
-    event_reader_thread = threading.Thread(target=kubernetes.watch_jobs)
-    event_reader_thread.start()
+    job_event_reader_thread = threading.Thread(target=kubernetes.watch_jobs,
+                                               args=(JOB_DB,))
+    job_event_reader_thread.start()
+    pod_event_reader_thread = threading.Thread(target=kubernetes.watch_pods,
+                                               args=(JOB_DB,))
+    pod_event_reader_thread.start()
     app.run(debug=True, port=5000,
             host='0.0.0.0')
