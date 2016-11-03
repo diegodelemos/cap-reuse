@@ -18,9 +18,22 @@ spec:
           - name: EXPERIMENT
             value: recast
          volumeMounts:
-          - name: cap-pv
+          - name: cap-recast-v
             mountPath: "/data"
+          - name: svaccount
+            mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
       volumes:
-      - name: cap-pv
-        persistentVolumeClaim:
-          claimName: cap-claim
+       - name: cap-recast-v
+         cephfs:
+           monitors:
+            - 128.142.36.227:6790
+            - 128.142.39.77:6790
+            - 128.142.39.144:6790
+           path: "/k8s"
+           user: k8s
+           secretRef:
+             name: ceph-secret
+           readOnly: false
+       - name: svaccount
+         secret:
+           secretName: default-token-twu7m

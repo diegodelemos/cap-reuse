@@ -93,13 +93,23 @@ def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
                     ],
                     "volumes": [
                         {
-                            "name": job_name,
-                            "hostPath": {
-                                "path": shared_dir
+                            "name": "cephfs",
+                            "cephfs": {
+                                "monitors": [
+                                    "128.142.36.227:6790",
+                                    "128.142.39.77:6790",
+                                    "128.142.39.144:6790"
+                                ],
+                                "path": shared_dir,
+                                "user": "k8s",
+                                "secretRef": {
+                                    "name": "ceph-secret"
+                                },
+                                "readOnly": False
                             }
                         }
                     ],
-                    "restartPolicy": "Never"
+                    "restartPolicy": "OnFailure"
                 }
             }
         }

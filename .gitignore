@@ -4,3 +4,5 @@ __pycache__/
 
 #
 redo.sh
+ceph-secret.yaml
+cephfs-rc.yaml
