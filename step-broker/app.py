@@ -1,18 +1,15 @@
-from flask import Flask, abort, jsonify, request
 import threading
-import pykube
+from flask import Flask, abort, jsonify, request
+import kubernetes
 
 app = Flask(__name__)
 app.secret_key = "mega secret key"
+JOB_DB = {}
 
-api = pykube.HTTPClient(pykube.KubeConfig.from_service_account())
-job_db = {}
 
 @app.route('/api/v1.0/jobs', methods=['GET'])
 def get_jobs():
-    jobs = [job.obj for job in pykube.Job.objects(api).
-            filter(namespace=pykube.all)]
-    return jsonify({"jobs": jobs}), 200
+    return jsonify({"jobs": kubernetes.get_jobs()}), 200
 
 
 @app.route('/api/v1.0/jobs', methods=['POST'])
@@ -23,76 +20,24 @@ def create_job():
        or not ('docker-img' in request.json):
         abort(400)
 
-    job = {
-        "kind": "Job",
-        "apiVersion": "batch/v1",
-        "metadata": {
-            "name": request.json['job-name'],
-        },
-        "spec": {
-            "autoSelector": True,
-            "template": {
-                "metadata": {
-                    "name": request.json['job-name'],
-                },
-                "spec": {
-                    "containers": [
-                        {
-                            "name": request.json['job-name'],
-                            "image": request.json['docker-img'],
-                            "env": [
-                                {
-                                    "name": "RANDOM_ERROR",
-                                    "value": "1"
-                                }
-                            ],
-                            "volumeMounts": [
-                                {
-                                    "name": request.json['job-name'],
-                                    "mountPath": "/data"
-                                }
-                            ]
-                        },
-                    ],
-                    "volumes": [
-                        {
-                            "name": request.json['job-name'],
-                            "hostPath": {
-                                "path": request.json['work-dir']
-                            }
-                        }
-                    ],
-                    "restartPolicy": "OnFailure"
-                }
-            }
-        }
-    }
+    job = kubernetes.create_job(request.json['job-name'],
+                                request.json['docker-img'],
+                                request.json['work-dir'])
 
-    pykube.Job(api, job).create()
-    job_db[request.json['job-name']] = 'started'
+    JOB_DB[request.json['job-name']] = 'started'
     return jsonify({'job': job}), 201
 
 
 @app.route('/api/v1.0/jobs/watch/<job_id>', methods=['GET'])
 def get_job(job_id):
-    if job_id in job_db:
-        return jsonify({'job': job_db[job_id]}), 200
+    if job_id in JOB_DB:
+        return jsonify({'job': JOB_DB[job_id]}), 200
     else:
         abort(404)
 
 
-def watch_jobs():
-    while True:
-        stream = pykube.Job.objects(api).filter(namespace=pykube.all).watch()
-        for line in stream:
-            job = line[1].obj
-            if job['metadata']['name'] in job_db:
-                job_db[job['metadata']['name']] = job['status']
-                print(job_db[job['metadata']['name']])
-
-
 if __name__ == '__main__':
-    events_thread = threading.Thread(target=watch_jobs)
-    events_thread.start()
+    event_reader_thread = threading.Thread(target=kubernetes.watch_jobs)
+    event_reader_thread.start()
     app.run(debug=True, port=5000,
             host='0.0.0.0')

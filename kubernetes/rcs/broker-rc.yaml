@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
        - name: rabbitmq
-         image: diegodelemos/capreuse_broker:latest
+         image: diegodelemos/capreuse_broker:0.2.0
          ports:
           - containerPort: 5672 
             name: "tcp"

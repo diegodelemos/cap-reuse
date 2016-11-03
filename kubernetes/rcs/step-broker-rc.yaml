@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
        - name: step-broker
-         image: diegodelemos/capreuse_step-broker:latest
+         image: diegodelemos/capreuse_step-broker:0.2.0
          ports:
           - containerPort: 5000 
             name: "http"
