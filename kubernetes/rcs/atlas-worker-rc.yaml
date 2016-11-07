@@ -11,17 +11,36 @@ spec:
     spec:
       containers:
        - name: atlas-celery-worker
-         image: diegodelemos/capreuse_worker:v0.1.0
+         image: diegodelemos/capreuse_worker:0.1.0
+         imagePullPolicy: Always
          env:
+          - name: USER_NAME
+            value: "capreuse-atlas"
+          - name: UUID
+            value: "1001"
           - name: QUEUE_ENV
-            value: atlas-queue
+            value: "atlas-queue"
           - name: EXPERIMENT
-            value: atlas
+            value: "atlas"
          volumeMounts:
-          - name: cap-pv
-            readOnly: false
+          - name: atlas-pv
             mountPath: "/data"
+          - name: svaccount
+            mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
+      securityContext:
+        fsGroup: 1001
       volumes:
-      - name: cap-pv
-        hostPath:
-          path: "/data"
+       - name: atlas-pv
+         cephfs:
+           monitors:
+            - 128.142.36.227:6790
+            - 128.142.39.77:6790
+            - 128.142.39.144:6790
+           path: "/k8s/atlas"
+           user: k8s
+           secretRef:
+             name: ceph-secret
+           readOnly: false
+       - name: svaccount
+         secret:
+           secretName: default-token-02p0z

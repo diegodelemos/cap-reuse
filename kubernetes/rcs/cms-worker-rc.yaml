@@ -11,17 +11,36 @@ spec:
     spec:
       containers:
        - name: cms-celery-worker
-         image: diegodelemos/capreuse_worker:v0.1.0
+         image: diegodelemos/capreuse_worker:0.1.0
+         imagePullPolicy: Always
          env:
+          - name: USER_NAME
+            value: "capreuse-cms"
+          - name: UUID
+            value: "1002"
           - name: QUEUE_ENV
-            value: cms-queue
+            value: "cms-queue"
           - name: EXPERIMENT
-            value: cms
+            value: "cms"
          volumeMounts:
-          - name: cap-pv
-            readOnly: false
+          - name: cms-pv
             mountPath: "/data"
+          - name: svaccount
+            mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
+      securityContext:
+        fsGroup: 1002
       volumes:
-      - name: cap-pv
-        hostPath:
-          path: "/data"
+       - name: cms-pv
+         cephfs:
+           monitors:
+            - 128.142.36.227:6790
+            - 128.142.39.77:6790
+            - 128.142.39.144:6790
+           path: "/k8s/cms"
+           user: k8s
+           secretRef:
+             name: ceph-secret
+           readOnly: false
+       - name: svaccount
+         secret:
+           secretName: default-token-02p0z

@@ -10,9 +10,7 @@ TOKEN_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/token'
 with open(TOKEN_PATH) as tf:
     TOKEN = tf.read()
 
-ENDPOINT = '/apis/extensions/v1beta1/namespaces/{ns}/jobs'.format(
-    ns=os.getenv('EXPERIMENT')
-)
+ENDPOINT = '/apis/extensions/v1beta1/namespaces/default/jobs'
 
 
 @app.task
@@ -20,8 +18,9 @@ def get_job_state(job_list):
     jobs_status_dict = dict([(job_id, None) for job_id in job_list])
     while True:
         try:
-            response = requests.get('{}{}'.format('https://kubernetes',
-                                                  ENDPOINT),
+            response = requests.get('https://{}{}'.format(
+                os.environ["KUBERNETES_SERVICE_HOST"],
+                ENDPOINT),
                                     params={'watch': 'true'},
                                     headers={'Authorization': 'Bearer {}'.
                                              format(
@@ -59,7 +58,7 @@ def get_job_state(job_list):
 
 
 @app.task(ignore_result=True)
-def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
+def create_job(job_name, docker_img):
     job_description = {
         "kind": "Job",
         "apiVersion": "extensions/v1beta1",
@@ -85,22 +84,25 @@ def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
                             ],
                             "volumeMounts": [
                                 {
-                                    "name": job_name,
+                                    "name": "pv",
                                     "mountPath": "/data"
                                 }
                             ]
                         },
                     ],
+                    "securityContext": {
+                        "fsGroup": os.getuid()
+                    },
                     "volumes": [
                         {
-                            "name": "cephfs",
+                            "name": "pv",
                             "cephfs": {
                                 "monitors": [
                                     "128.142.36.227:6790",
                                     "128.142.39.77:6790",
                                     "128.142.39.144:6790"
                                 ],
-                                "path": shared_dir,
+                                "path": "/k8s/data",
                                 "user": "k8s",
                                 "secretRef": {
                                     "name": "ceph-secret"
@@ -115,7 +117,8 @@ def create_job(job_name, docker_img, kubernetes_volume, shared_dir):
         }
     }
 
-    response = requests.post('{}{}'.format('https://kubernetes', ENDPOINT),
+    response = requests.post('https://{}{}'.format(os.environ["KUBERNETES_SERVICE_HOST"],
+                                                   ENDPOINT),
                              json=job_description,
                              headers={'Authorization': 'Bearer {}'.format(
                                  TOKEN
@@ -140,15 +143,13 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
               docker_img, task_weight, input_file, os.getenv('EXPERIMENT')
           )
 
-    shared_dir = os.path.join('/data', os.getenv('EXPERIMENT'),
-                              os.getenv('HOSTNAME'),
-                              fibonacci.request.id)
+    workflow_dir = os.path.join('/data', fibonacci.request.id)
 
     jobs_list = []
     # Call Kubernetes API to run docker img and transfer input file to the
     # volume it is going to use.
     for step, line in enumerate(input_file.split('\n')):
-        step_dir = os.path.join(shared_dir, str(step))
+        step_dir = os.path.join(workflow_dir, str(step))
         if not os.path.exists(step_dir):
             os.makedirs(step_dir)
         input_file_name = os.path.join(step_dir, 'input.dat')
@@ -156,12 +157,12 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
             f.write(line)
 
         job_name = '{}-{}'.format(fibonacci.request.id, step)
-        jobs_list .append(job_name)
+        jobs_list.append(job_name)
         # launch a job per line
-        create_job(job_name, docker_img, 'cap-claim', step_dir)
+        create_job(job_name, docker_img)
 
     results = get_job_state(jobs_list)
 
-    with open(os.path.join(shared_dir, 'workflow_result.dat'), 'w') as f:
+    with open(os.path.join(workflow_dir, 'workflow_result.dat'), 'w') as f:
         for job, success in results.iteritems():
             f.write('Job {} ---> succeeded: {}\n'.format(job, success))

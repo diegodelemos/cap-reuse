@@ -11,17 +11,24 @@ spec:
     spec:
       containers:
        - name: recast-celery-worker
-         image: diegodelemos/capreuse_worker:v0.1.0
+         image: diegodelemos/capreuse_recast-worker:0.1.0
+         imagePullPolicy: Always
          env:
+          - name: USER_NAME
+            value: "capreuse-recast"
+          - name: UUID
+            value: "1004"
           - name: QUEUE_ENV
-            value: recast-queue
+            value: "recast-queue"
           - name: EXPERIMENT
-            value: recast
+            value: "recast"
          volumeMounts:
           - name: cap-recast-v
             mountPath: "/data"
           - name: svaccount
             mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
+      securityContext:
+        fsGroup: 1004
       volumes:
        - name: cap-recast-v
          cephfs:
@@ -29,11 +36,11 @@ spec:
             - 128.142.36.227:6790
             - 128.142.39.77:6790
             - 128.142.39.144:6790
-           path: "/k8s"
+           path: "/k8s/recast"
            user: k8s
            secretRef:
              name: ceph-secret
            readOnly: false
        - name: svaccount
          secret:
-           secretName: default-token-twu7m
+           secretName: default-token-02p0z
