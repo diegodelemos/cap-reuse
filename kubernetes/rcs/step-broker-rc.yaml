@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: step-broker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: step-broker
+    spec:
+      containers:
+       - name: step-broker
+         image: diegodelemos/capreuse_step-broker:0.1.0
+         ports:
+          - containerPort: 5000 
+            name: "http"
+         volumeMounts:
+           - name: svaccount
+             mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
+      volumes:
+       - name: svaccount
+         secret:
+           secretName: default-token-02p0z
