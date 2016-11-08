@@ -31,6 +31,7 @@ def create_job():
     if ok:
         job = request.json
         job['status'] = 'started'
+        job['restart_count'] = 0
         JOB_DB[job.get('job-name')] = job
         return jsonify({'job': request.json}), 201
     else:
