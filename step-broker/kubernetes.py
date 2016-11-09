@@ -12,7 +12,7 @@ def get_jobs():
             filter(namespace=pykube.all)]
 
 
-def create_job(job_name, docker_img, work_dir, permissions):
+def create_job(job_name, docker_img, shared_volume, permissions):
     job = {
         "kind": "Job",
         "apiVersion": "batch/v1",
@@ -56,12 +56,12 @@ def create_job(job_name, docker_img, work_dir, permissions):
                                     "128.142.39.77:6790",
                                     "128.142.39.144:6790"
                                 ],
-                                "path": work_dir,
+                                "path": shared_volume,
                                 "user": "k8s",
                                 "secretRef": {
-                                    "name": "ceph-secret"
-                                },
-                                "readOnly": False
+                                    "name": "ceph-secret",
+                                    "readOnly": False
+                                }
                             }
                         }
                     ],
@@ -107,8 +107,7 @@ def watch_pods(job_db):
                         pod = pykube.Pod.objects(api).get_by_name(
                             pod['metadata']['name']
                         )
-                        # Remove this line and `logs()` function when
-                        # Pykube 0.14.0 is released
+                        # Remove this line when Pykube 0.14.0 is released
                         pod.logs = logs
                         job_db[job_name]['status'] = pod.logs(pod)
                         kill_job(job_name, [pod])
@@ -124,6 +123,7 @@ def kill_job(job_name, associated_pods):
         pod.delete()
 
 
+# Remove this function when Pykube 0.14.0 is released
 def logs(self, container=None, pretty=None, previous=False,
          since_seconds=None, since_time=None, timestamps=False,
          tail_lines=None, limit_bytes=None):

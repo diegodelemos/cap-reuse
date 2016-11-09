@@ -11,22 +11,22 @@ spec:
     spec:
       containers:
        - name: alice-celery-worker
-         image: diegodelemos/capreuse_alice-worker:0.1.0
+         image: diegodelemos/capreuse_worker:0.1.0
          imagePullPolicy: Always
          env:
           - name: QUEUE_ENV
-            value: "alice-queue"
+            value: alice-queue
           - name: EXPERIMENT
-            value: "alice"
+            value: alice
+          - name: SHARED_VOLUME
+            value: "/k8s/alice"
          volumeMounts:
-          - name: alice-pv
+          - name: cap-alice-pv
             mountPath: "/data"
-          - name: svaccount
-            mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
       securityContext:
-        fsGroup: 1000
+        fsGroup: 0
       volumes:
-       - name: alice-pv
+       - name: cap-alice-pv
          cephfs:
            monitors:
             - 128.142.36.227:6790
@@ -37,6 +37,3 @@ spec:
            secretRef:
              name: ceph-secret
            readOnly: false
-       - name: svaccount
-         secret:
-           secretName: default-token-02p0z

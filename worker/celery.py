@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from celery import Celery
 
 app = Celery('tasks',
-             broker='amqp://test:1234@broker-service//',
+             broker='amqp://test:1234@broker-service.default.svc.cluster.local//',
              include=['worker.tasks'])
 
 

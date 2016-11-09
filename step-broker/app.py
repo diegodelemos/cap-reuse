@@ -21,14 +21,15 @@ def get_k8sjobs():
 def create_job():
     if not request.json \
        or not ('job-name' in request.json)\
-       or not ('work-dir' in request.json)\
+       or not ('shared-volume' in request.json)\
        or not ('permissions' in request.json)\
        or not ('docker-img' in request.json):
+        print(request.json)
         abort(400)
 
     ok = kubernetes.create_job(request.json['job-name'],
                                request.json['docker-img'],
-                               request.json['work-dir'],
+                               request.json['shared-volume'],
                                int(request.json['permissions']))
     if ok:
         job = request.json
