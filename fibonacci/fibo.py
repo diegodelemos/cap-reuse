@@ -17,7 +17,7 @@ def fibonacci(number):
 
 def fibo_file(input_file, output_file):
     if os.getenv('RANDOM_ERROR', False) and \
-       random.randint(0, 10) < 5:
+       random.randint(0, 10) < 2:
         raise ArithmeticError
 
     number_list = []

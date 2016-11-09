@@ -27,13 +27,15 @@ spec:
         fsGroup: 0
       volumes:
        - name: cap-alice-pv
-         cephfs:
-           monitors:
-            - 128.142.36.227:6790
-            - 128.142.39.77:6790
-            - 128.142.39.144:6790
-           path: "/k8s/alice"
-           user: k8s
-           secretRef:
-             name: ceph-secret
-           readOnly: false
+         persistentVolumeClaim:
+           claimName: cap-alice-pv
+#         cephfs:
+#           monitors:
+#            - 128.142.36.227:6790
+#            - 128.142.39.77:6790
+#            - 128.142.39.144:6790
+#           path: "/k8s/alice"
+#           user: k8s
+#           secretRef:
+#             name: ceph-secret
+#           readOnly: false
