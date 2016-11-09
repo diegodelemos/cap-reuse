@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: flower-service
 spec:
-  type: "LoadBalancer"
+  type: "NodePort"
   ports:
   - port: 5555
     targetPort: 5555
