@@ -22,12 +22,14 @@ def create_job():
     if not request.json \
        or not ('job-name' in request.json)\
        or not ('work-dir' in request.json)\
+       or not ('permissions' in request.json)\
        or not ('docker-img' in request.json):
         abort(400)
 
     ok = kubernetes.create_job(request.json['job-name'],
                                request.json['docker-img'],
-                               request.json['work-dir'])
+                               request.json['work-dir'],
+                               int(request.json['permissions']))
     if ok:
         job = request.json
         job['status'] = 'started'
@@ -35,10 +37,10 @@ def create_job():
         JOB_DB[job.get('job-name')] = job
         return jsonify({'job': request.json}), 201
     else:
-        return jsonify({'job': 'failed'}), 500
+        return jsonify({'job': 'Could not be allocated'}), 500
 
 
-@app.route('/api/v1.0/jobs/watch/<job_id>', methods=['GET'])
+@app.route('/api/v1.0/jobs/<job_id>', methods=['GET'])
 def get_job(job_id):
     if job_id in JOB_DB:
         return jsonify({'job': JOB_DB[job_id]}), 200

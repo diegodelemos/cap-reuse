@@ -1,4 +1,5 @@
 import pykube
+from six.moves.urllib.parse import urlencode
 
 api = pykube.HTTPClient(pykube.KubeConfig.from_service_account())
 api.session.verify = False
@@ -11,7 +12,7 @@ def get_jobs():
             filter(namespace=pykube.all)]
 
 
-def create_job(job_name, docker_img, work_dir):
+def create_job(job_name, docker_img, work_dir, permissions):
     job = {
         "kind": "Job",
         "apiVersion": "batch/v1",
@@ -37,17 +38,30 @@ def create_job(job_name, docker_img, work_dir):
                             ],
                             "volumeMounts": [
                                 {
-                                    "name": job_name,
+                                    "name": "pv",
                                     "mountPath": "/data"
                                 }
                             ]
                         },
                     ],
+                    "securityContext": {
+                        "fsGroup": permissions
+                    },
                     "volumes": [
                         {
-                            "name": job_name,
-                            "hostPath": {
-                                "path": work_dir
+                            "name": "pv",
+                            "cephfs": {
+                                "monitors": [
+                                    "128.142.36.227:6790",
+                                    "128.142.39.77:6790",
+                                    "128.142.39.144:6790"
+                                ],
+                                "path": work_dir,
+                                "user": "k8s",
+                                "secretRef": {
+                                    "name": "ceph-secret"
+                                },
+                                "readOnly": False
                             }
                         }
                     ],
@@ -89,23 +103,62 @@ def watch_pods(job_db):
                     n_res \
                         = pod['status']['containerStatuses'][0]['restartCount']
                     job_db[job_name]['restart_count'] = n_res
+                    if job_db[job_name]['restart_count'] > MAX_JOB_RESTART:
+                        pod = pykube.Pod.objects(api).get_by_name(
+                            pod['metadata']['name']
+                        )
+                        # Remove this line and `logs()` function when
+                        # Pykube 0.14.0 is released
+                        pod.logs = logs
+                        job_db[job_name]['status'] = pod.logs(pod)
+                        kill_job(job_name, [pod])
+
                 except KeyError:
                     continue
 
-                if job_db[job_name]['restart_count'] > MAX_JOB_RESTART:
-                    job_db[job_name]['status'] = pod['status']\
-                                                 ['containerStatuses'][0]\
-                                                 ['lastState']['terminated']\
-                                                 ['message']
-                    kill_job(job_name)
 
-
-def kill_job(job_name):
-    job = pykube.Job.objects(api).get_by_name(
-        job_name
-    )
+def kill_job(job_name, associated_pods):
+    job = pykube.Job.objects(api).get_by_name(job_name)
     job.delete()
-    # it is not deleting the associated Pod.
-    # Once a job is deleted all its resources
-    # should be deleted by k8s also.
-    # FIX ME
+    for pod in associated_pods:
+        pod.delete()
+
+
+def logs(self, container=None, pretty=None, previous=False,
+         since_seconds=None, since_time=None, timestamps=False,
+         tail_lines=None, limit_bytes=None):
+    """
+    Produces the same result as calling kubectl logs pod/<pod-name>.
+    Check parameters meaning at
+    http://kubernetes.io/docs/api-reference/v1/operations/,
+    part 'read log of the specified Pod'. The result is plain text.
+    """
+    log_call = "log"
+    params = {}
+    if container is not None:
+        params["container"] = container
+    if pretty is not None:
+        params["pretty"] = pretty
+    if previous:
+        params["previous"] = "true"
+    if since_seconds is not None and since_time is None:
+        params["sinceSeconds"] = int(since_seconds)
+    elif since_time is not None and since_seconds is None:
+        params["sinceTime"] = since_time
+    if timestamps:
+        params["timestamps"] = "true"
+    if tail_lines is not None:
+        params["tailLines"] = int(tail_lines)
+    if limit_bytes is not None:
+        params["limitBytes"] = int(limit_bytes)
+
+    query_string = urlencode(params)
+    log_call += "?{}".format(query_string) if query_string else ""
+    kwargs = {
+        "version": self.version,
+        "namespace": self.namespace,
+        "operation": log_call,
+    }
+    r = self.api.get(**self.api_kwargs(**kwargs))
+    r.raise_for_status()
+    return r.text
