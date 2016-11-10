@@ -4,7 +4,7 @@ from six.moves.urllib.parse import urlencode
 api = pykube.HTTPClient(pykube.KubeConfig.from_service_account())
 api.session.verify = False
 
-MAX_JOB_RESTART = 1
+MAX_JOB_RESTART = 3
 
 
 def get_jobs():
@@ -96,6 +96,8 @@ def watch_pods(job_db):
         stream = pykube.Pod.objects(api).filter(namespace=pykube.all).watch()
         for line in stream:
             pod = line[1].obj
+            # FIX ME: watch out here, if the change the naming convention at
+            # some the following line won't work. Get job name from API.
             job_name = '-'.join(pod['metadata']['name'].split('-')[:-1])
             if job_name in [j for j in job_db.keys()
                             if job_db[j]['status'] == 'started']:
@@ -103,13 +105,24 @@ def watch_pods(job_db):
                     n_res \
                         = pod['status']['containerStatuses'][0]['restartCount']
                     job_db[job_name]['restart_count'] = n_res
-                    if job_db[job_name]['restart_count'] > MAX_JOB_RESTART:
+                    if n_res > MAX_JOB_RESTART \
+                       and job_db[job_name]['status'] != 'succeeded':
+                        print('Pod {} restarted {} times (max 1)'.format(
+                            pod['metadata']['name'],
+                            n_res)
+                        )
+                        print('Calling the API to get {} Pod'.format(
+                              pod['metadata']['name']))
                         pod = pykube.Pod.objects(api).get_by_name(
                             pod['metadata']['name']
                         )
                         # Remove this line when Pykube 0.14.0 is released
                         pod.logs = logs
+                        print('Calling the API to get {} logs'.format(
+                            pod.name))
                         job_db[job_name]['status'] = pod.logs(pod)
+                        print('Now I would be killing Job {} and its Pod {}'
+                              .format(job_name, pod.name))
                         kill_job(job_name, [pod])
 
                 except KeyError:
@@ -117,10 +130,13 @@ def watch_pods(job_db):
 
 
 def kill_job(job_name, associated_pods):
-    job = pykube.Job.objects(api).get_by_name(job_name)
-    job.delete()
-    for pod in associated_pods:
-        pod.delete()
+    # print('Calling the API to delete Job {}'.format(job_name))
+    # job = pykube.Job.objects(api).get_by_name(job_name)
+    # job.delete()
+    # print('Calling the API to delete Pods: {}'.format(associated_pods))
+    # for pod in associated_pods:
+    #    pod.delete()
+    pass
 
 
 # Remove this function when Pykube 0.14.0 is released

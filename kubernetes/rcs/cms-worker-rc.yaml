@@ -14,21 +14,17 @@ spec:
          image: diegodelemos/capreuse_cms-worker:0.1.0
          imagePullPolicy: Always
          env:
-          - name: USER_NAME
-            value: "capreuse-cms"
-          - name: UUID
-            value: "1002"
           - name: QUEUE_ENV
             value: "cms-queue"
           - name: EXPERIMENT
             value: "cms"
+          - name: SHARED_VOLUME
+            value: "/k8s/cms"
          volumeMounts:
           - name: cms-pv
             mountPath: "/data"
-          - name: svaccount
-            mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
       securityContext:
-        fsGroup: 1002
+        fsGroup: 0
       volumes:
        - name: cms-pv
          cephfs:
@@ -41,6 +37,3 @@ spec:
            secretRef:
              name: ceph-secret
            readOnly: false
-       - name: svaccount
-         secret:
-           secretName: default-token-02p0z

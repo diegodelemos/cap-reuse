@@ -14,21 +14,17 @@ spec:
          image: diegodelemos/capreuse_atlas-worker:0.1.0
          imagePullPolicy: Always
          env:
-          - name: USER_NAME
-            value: "capreuse-atlas"
-          - name: UUID
-            value: "1001"
           - name: QUEUE_ENV
             value: "atlas-queue"
           - name: EXPERIMENT
             value: "atlas"
+          - name: SHARED_VOLUME
+            value: "/k8s/atlas"
          volumeMounts:
           - name: atlas-pv
             mountPath: "/data"
-          - name: svaccount
-            mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
       securityContext:
-        fsGroup: 1001
+        fsGroup: 0
       volumes:
        - name: atlas-pv
          cephfs:
@@ -41,6 +37,3 @@ spec:
            secretRef:
              name: ceph-secret
            readOnly: false
-       - name: svaccount
-         secret:
-           secretName: default-token-02p0z

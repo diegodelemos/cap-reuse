@@ -7,28 +7,24 @@ spec:
   template:
     metadata:
       labels:
-        app: lhcp-worker
+        app: lhcb-worker
     spec:
       containers:
        - name: lhcb-celery-worker
          image: diegodelemos/capreuse_lhcb-worker:0.1.0
          imagePullPolicy: Always
          env:
-          - name: USER_NAME
-            value: "capreuse-lhcb"
-          - name: UUID
-            value: "1003"
           - name: QUEUE_ENV
             value: "lhcb-queue"
           - name: EXPERIMENT
             value: "lhcb"
+          - name: SHARED_VOLUME
+            value: "/k8s/lhcb"
          volumeMounts:
           - name: lhcb-pv
             mountPath: "/data"
-          - name: svaccount
-            mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
       securityContext:
-        fsGroup: 1003
+        fsGroup: 0
       volumes:
        - name: lhcb-pv
          cephfs:
@@ -41,6 +37,3 @@ spec:
            secretRef:
              name: ceph-secret
            readOnly: false
-       - name: svaccount
-         secret:
-           secretName: default-token-02p0z
