@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
        - name: cms-celery-worker
-         image: diegodelemos/capreuse_cms-worker:0.1.0
+         image: diegodelemos/capreuse_worker:0.1.0
          imagePullPolicy: Always
          env:
           - name: QUEUE_ENV

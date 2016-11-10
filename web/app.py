@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 import base64
 import json
+import traceback
 from flask import (Flask, abort, flash, redirect, render_template,
                    request, url_for)
 from tasks import fibonacci
-
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -21,7 +21,13 @@ experiment_to_queue = {
 def check_input_file(input_file):
     nums = []
     if input_file.find('\n') > 0:
-        for line in input_file.split('\n'):
+        lines = input_file.split('\n')
+        if lines[0] != 'Fibonacci pipeline':
+            raise ValueError
+        # lines[2] which is the docker image should
+        # be checked but since this is a proof of
+        # concept we suppose that it exists.
+        for line in lines[2:]:
             tmp_nums = []
             for num in line.split(','):
                 tmp_nums.append(int(num))
@@ -32,7 +38,7 @@ def check_input_file(input_file):
             tmp_nums.append(int(num))
         nums.append(tmp_nums)
 
-    return nums
+    return lines[1], '\n'.join(lines[2:])
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -45,38 +51,32 @@ def index():
         try:
             if request.json:
                 data = json.loads(request.json)
-                docker_img = data['docker-img']
                 task_weight = data['weight']
                 experiment = data['experiment']
+                queue = experiment_to_queue[experiment]
                 input_file = base64.decodestring(data['input-file'])
-                check_input_file(input_file)
+                docker_img, fib_file = check_input_file(input_file)
                 # send right away
                 fibonacci.apply_async(
-                    args=[docker_img, task_weight, input_file, experiment],
-                    queue=experiment_to_queue[experiment]
-                )
-                return 'Success'
-            else:
-                docker_img = request.form['docker-img']
-                task_weight = request.form['weight']
-                queue = experiment_to_queue[request.form['experiment']]
-                input_file = request.form['input-file']
-                check_input_file(input_file)
-                # send right away
-                fibonacci.apply_async(
-                    args=[docker_img, task_weight, input_file,
-                          request.form['experiment']],
+                    args=[docker_img, task_weight, fib_file, experiment],
                     queue=queue
                 )
-                flash(
-                    'Running docker image {0} with weight {1} and the \
-                    following input file on {2}: {3}'.format(
-                        docker_img, task_weight, request.form['experiment'],
-                        input_file
-                    )
+                return 'Workflow successfully launched'
+            else:
+                task_weight = request.form['weight']
+                experiment = request.form['experiment']
+                queue = experiment_to_queue[request.form['experiment']]
+                input_file = request.form['input-file']
+                docker_img, fib_file = check_input_file(input_file)
+                # send right away
+                fibonacci.apply_async(
+                    args=[docker_img, task_weight, fib_file, experiment],
+                    queue=queue
                 )
+                flash('Workflow successfully launched')
                 return redirect(url_for('index'))
         except (KeyError, ValueError):
+            traceback.print_exc()
             abort(400)
 
 

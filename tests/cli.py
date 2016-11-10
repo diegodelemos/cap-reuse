@@ -8,8 +8,6 @@ import requests
 @click.command('fibo-experiment')
 @click.option('--url', default='http://137.138.6.43:32331/',
               help='API endpoint')
-@click.option('-d', '--docker-img', default='diegodelemos/capreuse_fibonacci:0.1.0',
-              help='Docker image')
 @click.option('-w', '--weight', default='slow', help='Docker image')
 @click.option('-e', '--experiment', default='alice',
               type=click.Choice(['alice', 'atlas', 'cms', 'lhcb', 'recast']),
@@ -19,14 +17,13 @@ import requests
 @click.option('-n', default='1',
               type=click.IntRange(min=1, max=40),
               help='Number of requests')
-def all_experiments_same_data(url, docker_img, weight, experiment, filename, n):
+def all_experiments_same_data(url, weight, experiment, filename, n):
     with open(click.format_filename(filename)) as f:
         input_file = f.read()
 
     input_file_b64 = base64.encodestring(input_file.encode())
 
     data = {
-        'docker-img': docker_img,
         'weight': weight,
         'experiment': experiment,
         'input-file': input_file_b64
