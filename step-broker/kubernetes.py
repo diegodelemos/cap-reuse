@@ -74,9 +74,9 @@ def create_job(job_name, docker_img, shared_volume, permissions):
     # add better handling
     try:
         pykube.Job(api, job).create()
-        return True
+        return job
     except pykube.exceptions.HTTPError:
-        return False
+        return None
 
 
 def watch_jobs(job_db):
@@ -96,7 +96,7 @@ def watch_jobs(job_db):
                     print('I know the guy {} has ended.Killing him'.format(
                         job['metadata']['name'])
                     )
-                    # kill_job(job['metadata']['name'])
+                    pykube.Job(api, job).delete()
                 # with the current k8s implementation this is never
                 # going to happen...
                 if job['status'].get('failed'):
@@ -130,31 +130,15 @@ def watch_pods(job_db):
                         print('Calling the API to get {} Pod'.format(
                             pod['metadata']['name']))
 
-                        pod = pykube.Pod.objects(api).get_by_name(
-                            pod['metadata']['name']
-                        )
+                        pod = pykube.Pod(api, pod)
                         # Remove this line when Pykube 0.14.0 is released
                         pod.logs = logs
                         job_db[job_name]['status'] = 'failed'
                         job_db[job_name]['log'] = pod.logs(pod)
-                        # kill_job(job_name)
+                        pykube.Job(api, job_db[job_name]['json_obj']).delete()
 
                 except KeyError:
                     continue
-
-
-def kill_job(job_name):
-    # TODO avoid this method. Only one call to delete
-    print('Calling the API to delete Job {}'.format(job_name))
-    job = pykube.Job.objects(api).get_by_name(job_name)
-    job.delete()
-
-
-def kill_pod(pod_name):
-    # TODO avoid this method. Only one call to delete
-    print('Calling the API to delete Pod {}'.format(pod_name))
-    pod = pykube.Pod.objects(api).get_by_name(pod_name)
-    pod.delete()
 
 
 # Remove this function when Pykube 0.14.0 is released

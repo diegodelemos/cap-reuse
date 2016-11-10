@@ -1,3 +1,4 @@
+import copy
 import threading
 from flask import Flask, abort, jsonify, request
 import kubernetes
@@ -7,9 +8,18 @@ app.secret_key = "mega secret key"
 JOB_DB = {}
 
 
+def filter_jobs(job_db):
+    job_db_copy = copy.deepcopy(job_db)
+    for job_name in job_db_copy:
+        del(job_db_copy[job_name]['json_obj'])
+        del(job_db_copy[job_name]['pod'])
+
+    return job_db_copy
+
+
 @app.route('/api/v1.0/jobs', methods=['GET'])
 def get_jobs():
-    return jsonify({"jobs": JOB_DB}), 200
+    return jsonify({"jobs": filter_jobs(JOB_DB)}), 200
 
 
 @app.route('/api/v1.0/k8sjobs', methods=['GET'])
@@ -27,14 +37,15 @@ def create_job():
         print(request.json)
         abort(400)
 
-    ok = kubernetes.create_job(request.json['job-name'],
-                               request.json['docker-img'],
-                               request.json['shared-volume'],
-                               int(request.json['permissions']))
-    if ok:
+    job_obj = kubernetes.create_job(request.json['job-name'],
+                                    request.json['docker-img'],
+                                    request.json['shared-volume'],
+                                    int(request.json['permissions']))
+    if job_obj:
         job = request.json
         job['status'] = 'started'
         job['restart_count'] = 0
+        job['json_obj'] = job_obj
         JOB_DB[job.get('job-name')] = job
         return jsonify({'job': request.json}), 201
     else:
@@ -44,7 +55,10 @@ def create_job():
 @app.route('/api/v1.0/jobs/<job_id>', methods=['GET'])
 def get_job(job_id):
     if job_id in JOB_DB:
-        return jsonify({'job': JOB_DB[job_id]}), 200
+        job_copy = copy.deepcopy(JOB_DB[job_id])
+        del(job_copy['json_obj'])
+        del(job_copy['pod'])
+        return jsonify({'job': job_copy}), 200
     else:
         abort(404)
 
