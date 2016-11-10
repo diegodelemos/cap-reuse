@@ -31,8 +31,14 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
         print 'writing: {} \n as user with uuid: {}'.format(
             input_file_name, os.getuid()
         )
-        with open(input_file_name, 'w') as f:
-            f.write(line)
+        while True:
+            try:
+                with open(input_file_name, 'w') as f:
+                    f.write(line)
+                    break
+            except IOError:
+                print('Retrying to write {}'.format(input_file_name))
+                continue
 
         job_name = '{}-{}'.format(fibonacci.request.id, step)
         jobs_list.append(job_name)

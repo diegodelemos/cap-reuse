@@ -84,9 +84,21 @@ def watch_jobs(job_db):
         stream = pykube.Job.objects(api).filter(namespace=pykube.all).watch()
         for line in stream:
             job = line[1].obj
-            if job['metadata']['name'] in job_db:
+            # TODO try when job deleted event delete pod
+            unended_jobs = [j for j in job_db.keys()
+                            if job_db[j]['status'] != 'succeeded'
+                            or not (job_db[j].get('log')
+                                    and job_db[j]['status'] == 'failed')]
+            print(unended_jobs)
+            if job['metadata']['name'] in unended_jobs:
                 if job['status'].get('succeeded'):
                     job_db[job['metadata']['name']]['status'] = 'succeeded'
+                    print('I know the guy {} has ended.Killing him'.format(
+                        job['metadata']['name'])
+                    )
+                    # kill_job(job['metadata']['name'])
+                # with the current k8s implementation this is never
+                # going to happen...
                 if job['status'].get('failed'):
                     job_db[job['metadata']['name']]['status'] = 'failed'
 
@@ -99,44 +111,50 @@ def watch_pods(job_db):
             # FIX ME: watch out here, if the change the naming convention at
             # some the following line won't work. Get job name from API.
             job_name = '-'.join(pod['metadata']['name'].split('-')[:-1])
-            if job_name in [j for j in job_db.keys()
-                            if job_db[j]['status'] == 'started']:
+            # Take note of the related Pod
+            if job_db.get(job_name):
+                job_db[job_name]['pod'] = pod['metadata']['name']
+            unended_jobs = [j for j in job_db.keys()
+                            if job_db[j]['status'] != 'succeeded'
+                            or not (job_db[j].get('log')
+                                    and job_db[j]['status'] == 'failed')]
+            if job_name in unended_jobs:
                 try:
-                    n_res \
-                        = pod['status']['containerStatuses'][0]['restartCount']
-                    job_db[job_name]['restart_count'] = n_res
-                    if n_res > MAX_JOB_RESTART \
-                       and job_db[job_name]['status'] != 'succeeded':
+                    res = pod['status']['containerStatuses'][0]['restartCount']
+                    job_db[job_name]['restart_count'] = res
+                    if res > MAX_JOB_RESTART:
                         print('Pod {} restarted {} times (max 1)'.format(
                             pod['metadata']['name'],
-                            n_res)
+                            res)
                         )
                         print('Calling the API to get {} Pod'.format(
-                              pod['metadata']['name']))
+                            pod['metadata']['name']))
+
                         pod = pykube.Pod.objects(api).get_by_name(
                             pod['metadata']['name']
                         )
                         # Remove this line when Pykube 0.14.0 is released
                         pod.logs = logs
-                        print('Calling the API to get {} logs'.format(
-                            pod.name))
-                        job_db[job_name]['status'] = pod.logs(pod)
-                        print('Now I would be killing Job {} and its Pod {}'
-                              .format(job_name, pod.name))
-                        kill_job(job_name, [pod])
+                        job_db[job_name]['status'] = 'failed'
+                        job_db[job_name]['log'] = pod.logs(pod)
+                        # kill_job(job_name)
 
                 except KeyError:
                     continue
 
 
-def kill_job(job_name, associated_pods):
-    # print('Calling the API to delete Job {}'.format(job_name))
-    # job = pykube.Job.objects(api).get_by_name(job_name)
-    # job.delete()
-    # print('Calling the API to delete Pods: {}'.format(associated_pods))
-    # for pod in associated_pods:
-    #    pod.delete()
-    pass
+def kill_job(job_name):
+    # TODO avoid this method. Only one call to delete
+    print('Calling the API to delete Job {}'.format(job_name))
+    job = pykube.Job.objects(api).get_by_name(job_name)
+    job.delete()
+
+
+def kill_pod(pod_name):
+    # TODO avoid this method. Only one call to delete
+    print('Calling the API to delete Pod {}'.format(pod_name))
+    pod = pykube.Pod.objects(api).get_by_name(pod_name)
+    pod.delete()
 
 
 # Remove this function when Pykube 0.14.0 is released
