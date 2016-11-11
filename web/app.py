@@ -22,12 +22,13 @@ def check_input_file(input_file):
     nums = []
     if input_file.find('\n') > 0:
         lines = input_file.split('\n')
-        if lines[0] != 'Fibonacci pipeline':
+        if lines[0].strip() != 'Fibonacci pipeline':
             raise ValueError
         # lines[2] which is the docker image should
         # be checked but since this is a proof of
         # concept we suppose that it exists.
-        for line in lines[2:]:
+        for pos, line in enumerate(lines[2:]):
+            lines[pos+2] = lines[pos+2].strip()
             tmp_nums = []
             for num in line.split(','):
                 tmp_nums.append(int(num))
@@ -57,6 +58,7 @@ def index():
                 input_file = base64.decodestring(data['input-file'])
                 docker_img, fib_file = check_input_file(input_file)
                 # send right away
+
                 fibonacci.apply_async(
                     args=[docker_img, task_weight, fib_file, experiment],
                     queue=queue
@@ -68,6 +70,7 @@ def index():
                 queue = experiment_to_queue[request.form['experiment']]
                 input_file = request.form['input-file']
                 docker_img, fib_file = check_input_file(input_file)
+
                 # send right away
                 fibonacci.apply_async(
                     args=[docker_img, task_weight, fib_file, experiment],
