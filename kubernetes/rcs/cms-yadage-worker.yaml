@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: cms-yadage-worker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cms-yadage-worker
+    spec:
+      containers:
+       - name: cms-yadage-worker
+         image: diegodelemos/capreuse_yadage-worker:0.1.0
+         imagePullPolicy: Always
+         env:
+          - name: QUEUE_ENV
+            value: cms-queue
+          - name: EXPERIMENT
+            value: cms
+          - name: SHARED_VOLUME
+            value: "/k8s/cms"
+         volumeMounts:
+          - name: cms
+            mountPath: "/data"
+      volumes:
+       - name: cms
+         cephfs:
+           monitors:
+            - 128.142.36.227:6790
+            - 128.142.39.77:6790
+            - 128.142.39.144:6790
+           path: "/k8s/cms"
+           user: k8s
+           secretRef:
+             name: ceph-secret
+           readOnly: false
+

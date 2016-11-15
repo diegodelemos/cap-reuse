@@ -5,6 +5,7 @@ import traceback
 from flask import (Flask, abort, flash, redirect, render_template,
                    request, url_for)
 from tasks import fibonacci
+from tasks import run_yadage_workflow
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -78,6 +79,28 @@ def index():
                 )
                 flash('Workflow successfully launched')
                 return redirect(url_for('index'))
+        except (KeyError, ValueError):
+            traceback.print_exc()
+            abort(400)
+
+
+@app.route('/yadage', methods=['GET', 'POST'])
+def yadage():
+    if request.method == 'POST':
+        try:
+            if request.json:
+                toplevel = request.json['toplevel']
+                workflow = request.json['workflow']
+                parameters = request.json['parameters']
+                experiment = request.json['experiment']
+                queue = experiment_to_queue[experiment]
+                run_yadage_workflow.apply_async(
+                    args=[toplevel, workflow, parameters],
+                    queue=queue
+                )
+
+                return 'Workflow successfully launched'
+
         except (KeyError, ValueError):
             traceback.print_exc()
             abort(400)
