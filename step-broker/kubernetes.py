@@ -4,15 +4,13 @@ from six.moves.urllib.parse import urlencode
 api = pykube.HTTPClient(pykube.KubeConfig.from_service_account())
 api.session.verify = False
 
-MAX_JOB_RESTART = 3
-
 
 def get_jobs():
     return [job.obj for job in pykube.Job.objects(api).
             filter(namespace=pykube.all)]
 
 
-def create_job(job_name, docker_img, shared_volume, permissions):
+def create_job(job_name, docker_img, volume, working_directory):
     job = {
         "kind": "Job",
         "apiVersion": "batch/v1",
@@ -34,37 +32,21 @@ def create_job(job_name, docker_img, shared_volume, permissions):
                                 {
                                     "name": "RANDOM_ERROR",
                                     "value": "1"
+                                },
+                                {
+                                    "name": "WORK_DIR",
+                                    "value": working_directory
                                 }
                             ],
                             "volumeMounts": [
                                 {
-                                    "name": "pv",
+                                    "name": volume['name'],
                                     "mountPath": "/data"
                                 }
                             ]
                         },
                     ],
-                    "securityContext": {
-                        "fsGroup": permissions
-                    },
-                    "volumes": [
-                        {
-                            "name": "pv",
-                            "cephfs": {
-                                "monitors": [
-                                    "128.142.36.227:6790",
-                                    "128.142.39.77:6790",
-                                    "128.142.39.144:6790"
-                                ],
-                                "path": shared_volume,
-                                "user": "k8s",
-                                "secretRef": {
-                                    "name": "ceph-secret",
-                                    "readOnly": False
-                                }
-                            }
-                        }
-                    ],
+                    "volumes": [volume],
                     "restartPolicy": "OnFailure"
                 }
             }
@@ -73,8 +55,9 @@ def create_job(job_name, docker_img, shared_volume, permissions):
 
     # add better handling
     try:
-        pykube.Job(api, job).create()
-        return job
+        job_obj = pykube.Job(api, job)
+        job_obj.create()
+        return job_obj
     except pykube.exceptions.HTTPError:
         return None
 
@@ -82,63 +65,56 @@ def create_job(job_name, docker_img, shared_volume, permissions):
 def watch_jobs(job_db):
     while True:
         stream = pykube.Job.objects(api).filter(namespace=pykube.all).watch()
-        for line in stream:
-            job = line[1].obj
-            # TODO try when job deleted event delete pod
+        for event in stream:
+            job = event.object
+            if event.type == 'DELETED':
+                job_db[job.name]['pod'].delete()
+
             unended_jobs = [j for j in job_db.keys()
-                            if job_db[j]['status'] != 'succeeded'
-                            or not (job_db[j].get('log')
-                                    and job_db[j]['status'] == 'failed')]
-            print(unended_jobs)
-            if job['metadata']['name'] in unended_jobs:
-                if job['status'].get('succeeded'):
-                    job_db[job['metadata']['name']]['status'] = 'succeeded'
-                    print('I know the guy {} has ended.Killing him'.format(
-                        job['metadata']['name'])
-                    )
-                    pykube.Job(api, job).delete()
+                            if not job_db[j]['deleted']]
+
+            if job.name in unended_jobs:
+                if job.obj['status'].get('succeeded'):
+                    job_db[job.name]['status'] = 'succeeded'
+                    job.delete()
+                    job_db[job.name]['deleted'] = True
+
                 # with the current k8s implementation this is never
                 # going to happen...
-                if job['status'].get('failed'):
+                if job.obj['status'].get('failed'):
                     job_db[job['metadata']['name']]['status'] = 'failed'
 
 
 def watch_pods(job_db):
     while True:
         stream = pykube.Pod.objects(api).filter(namespace=pykube.all).watch()
-        for line in stream:
-            pod = line[1].obj
+        for event in stream:
+            pod = event.object
             # FIX ME: watch out here, if the change the naming convention at
             # some the following line won't work. Get job name from API.
-            job_name = '-'.join(pod['metadata']['name'].split('-')[:-1])
+            job_name = '-'.join(pod.name.split('-')[:-1])
             # Take note of the related Pod
             if job_db.get(job_name):
-                job_db[job_name]['pod'] = pod['metadata']['name']
-            unended_jobs = [j for j in job_db.keys()
-                            if job_db[j]['status'] != 'succeeded'
-                            or not (job_db[j].get('log')
-                                    and job_db[j]['status'] == 'failed')]
-            if job_name in unended_jobs:
-                try:
-                    res = pod['status']['containerStatuses'][0]['restartCount']
-                    job_db[job_name]['restart_count'] = res
-                    if res > MAX_JOB_RESTART:
-                        print('Pod {} restarted {} times (max 1)'.format(
-                            pod['metadata']['name'],
-                            res)
-                        )
-                        print('Calling the API to get {} Pod'.format(
-                            pod['metadata']['name']))
+                job_db[job_name]['pod'] = pod
+                unended_jobs = [j for j in job_db.keys()
+                                if not job_db[j]['deleted']]
 
-                        pod = pykube.Pod(api, pod)
-                        # Remove this line when Pykube 0.14.0 is released
-                        pod.logs = logs
-                        job_db[job_name]['status'] = 'failed'
-                        job_db[job_name]['log'] = pod.logs(pod)
-                        pykube.Job(api, job_db[job_name]['json_obj']).delete()
+                if job_name in unended_jobs:
+                    try:
+                        res = pod.obj['status']['containerStatuses'][0]\
+                              ['restartCount']
+                        job_db[job_name]['restart_count'] = res
+                        if res >= job_db[job_name]['max_restart_count']:
+                            job_db[job_name]['status'] = 'failed'
+                            # Remove this line when Pykube 0.14.0 is released
+                            pod.logs = logs
+                            # log failing right now
+                            job_db[job_name]['log'] = pod.logs(pod)
+                            job_db[job_name]['obj'].delete()
+                            job_db[job_name]['deleted'] = True
 
-                except KeyError:
-                    continue
+                    except KeyError:
+                        continue
 
 
 # Remove this function when Pykube 0.14.0 is released

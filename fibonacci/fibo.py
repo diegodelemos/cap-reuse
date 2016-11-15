@@ -31,4 +31,8 @@ def fibo_file(input_file, output_file):
 
 
 if __name__ == '__main__':
-    fibo_file('/data/input.dat', '/data/output.dat')
+    working_directory = os.path.join('/data', os.getenv('WORK_DIR'))
+    fibo_file(
+        os.path.join(working_directory, 'input.dat'),
+        os.path.join(working_directory, 'output.dat')
+    )

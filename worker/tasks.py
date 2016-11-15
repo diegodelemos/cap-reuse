@@ -19,18 +19,15 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
           )
 
     workflow_dir = os.path.join('/data', fibonacci.request.id)
-
     jobs_list = []
-    # Call Kubernetes API to run docker img and transfer input file to the
-    # volume it is going to use.
+
     for step, line in enumerate(input_file.split('\n')):
         step_dir = os.path.join(workflow_dir, str(step))
         if not os.path.exists(step_dir):
             os.makedirs(step_dir)
+
         input_file_name = os.path.join(step_dir, 'input.dat')
-        print 'writing: {} \n as user with uuid: {}'.format(
-            input_file_name, os.getuid()
-        )
+
         while True:
             try:
                 with open(input_file_name, 'w') as f:
@@ -43,19 +40,18 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
         job_name = '{}-{}'.format(fibonacci.request.id, step)
         jobs_list.append(job_name)
         # launch a job per line
-        print 'Call step broker api to launch job'
+        # Call step-broker api to launch job
 
         job_spec = {
+            "experiment": os.getenv('EXPERIMENT'),
             "job-name": job_name,
-            "docker-img": "diegodelemos/capreuse_fibonacci:0.1.0",
-            "shared-volume": os.path.join(
-                os.getenv('SHARED_VOLUME'),
+            "docker-img": docker_img,
+            "work-dir": os.path.join(
                 fibonacci.request.id,
                 str(step)
-            ),
-            "permissions": os.getuid()
+            )
         }
-
+        print(job_spec)
         response = requests.post(
             'http://{host}/{api}/{resource}'.format(
                 host='step-broker-service.default.svc.cluster.local',
@@ -71,10 +67,3 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
         else:
             print 'Error while trying to create job'
             print response.text
-
-    # get workflow result
-    # results = get_job_state(jobs_list)
-
-    # with open(os.path.join(workflow_dir, 'workflow_result.dat'), 'w') as f:
-    #    for job, success in results.iteritems():
-    #        f.write('Job {} ---> succeeded: {}\n'.format(job, success))

@@ -1,4 +1,5 @@
 import copy
+import json
 import threading
 from flask import Flask, abort, jsonify, request
 import kubernetes
@@ -8,11 +9,17 @@ app.secret_key = "mega secret key"
 JOB_DB = {}
 
 
+def get_config(experiment):
+    with open('config_template.json', 'r') as config:
+        return json.load(config)[experiment]
+
+
 def filter_jobs(job_db):
     job_db_copy = copy.deepcopy(job_db)
     for job_name in job_db_copy:
-        del(job_db_copy[job_name]['json_obj'])
+        del(job_db_copy[job_name]['obj'])
         del(job_db_copy[job_name]['pod'])
+        del(job_db_copy[job_name]['deleted'])
 
     return job_db_copy
 
@@ -30,22 +37,28 @@ def get_k8sjobs():
 @app.route('/api/v1.0/jobs', methods=['POST'])
 def create_job():
     if not request.json \
+       or not ('experiment') in request.json\
        or not ('job-name' in request.json)\
-       or not ('shared-volume' in request.json)\
-       or not ('permissions' in request.json)\
-       or not ('docker-img' in request.json):
+       or not ('docker-img' in request.json)\
+       or not ('work-dir' in request.json):
         print(request.json)
         abort(400)
 
+    print('creating job')
+    experiment_config = get_config(request.json['experiment'])
+
     job_obj = kubernetes.create_job(request.json['job-name'],
                                     request.json['docker-img'],
-                                    request.json['shared-volume'],
-                                    int(request.json['permissions']))
+                                    experiment_config['k8s_volume'],
+                                    request.json['work-dir'])
+    print('job_created')
     if job_obj:
-        job = request.json
+        job = copy.deepcopy(request.json)
         job['status'] = 'started'
         job['restart_count'] = 0
-        job['json_obj'] = job_obj
+        job['max_restart_count'] = 1
+        job['obj'] = job_obj
+        job['deleted'] = False
         JOB_DB[job.get('job-name')] = job
         return jsonify({'job': request.json}), 201
     else:
@@ -56,8 +69,9 @@ def create_job():
 def get_job(job_id):
     if job_id in JOB_DB:
         job_copy = copy.deepcopy(JOB_DB[job_id])
-        del(job_copy['json_obj'])
+        del(job_copy['obj'])
         del(job_copy['pod'])
+        del(job_copy['deleted'])
         return jsonify({'job': job_copy}), 200
     else:
         abort(404)
