@@ -69,6 +69,7 @@ def watch_jobs(job_db):
             job = event.object
             if event.type == 'DELETED':
                 job_db[job.name]['pod'].delete()
+                job_db[job.name]['deleted'] = True
 
             unended_jobs = [j for j in job_db.keys()
                             if not job_db[j]['deleted']]
@@ -77,7 +78,6 @@ def watch_jobs(job_db):
                 if job.obj['status'].get('succeeded'):
                     job_db[job.name]['status'] = 'succeeded'
                     job.delete()
-                    job_db[job.name]['deleted'] = True
 
                 # with the current k8s implementation this is never
                 # going to happen...
@@ -103,15 +103,18 @@ def watch_pods(job_db):
                     try:
                         res = pod.obj['status']['containerStatuses'][0]\
                               ['restartCount']
+                        is_terminated = pod.obj['status']\
+                                        ['containerStatuses'][0]\
+                                        ['state'].get('terminated')
                         job_db[job_name]['restart_count'] = res
-                        if res >= job_db[job_name]['max_restart_count']:
+                        if res >= job_db[job_name]['max_restart_count']\
+                           and is_terminated:
                             job_db[job_name]['status'] = 'failed'
                             # Remove this line when Pykube 0.14.0 is released
                             pod.logs = logs
                             # log failing right now
                             job_db[job_name]['log'] = pod.logs(pod)
                             job_db[job_name]['obj'].delete()
-                            job_db[job_name]['deleted'] = True
 
                     except KeyError:
                         continue
