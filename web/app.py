@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 import base64
-import json
 import traceback
 from flask import (Flask, abort, flash, redirect, render_template,
                    request, url_for)
@@ -19,7 +18,7 @@ experiment_to_queue = {
 }
 
 
-def check_input_file(input_file):
+def check_fibonacci_workflow(input_file):
     nums = []
     if input_file.find('\n') > 0:
         lines = input_file.split('\n')
@@ -43,8 +42,8 @@ def check_input_file(input_file):
     return lines[1], '\n'.join(lines[2:])
 
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
+@app.route('/fibonacci', methods=['GET', 'POST'])
+def fibonacci_endpoint():
     if request.method == 'GET':
         return render_template('bg-form.html')
 
@@ -52,48 +51,46 @@ def index():
     if request.method == 'POST':
         try:
             if request.json:
-                data = json.loads(request.json)
-                task_weight = data['weight']
-                experiment = data['experiment']
-                queue = experiment_to_queue[experiment]
-                input_file = base64.decodestring(data['input-file'])
-                docker_img, fib_file = check_input_file(input_file)
-                # send right away
+                task_weight = request.json['weight']
+                queue = experiment_to_queue[request.json['experiment']]
+                input_file = base64.decodestring(request.json['input-file'])
+                docker_img, fib_file = check_fibonacci_workflow(input_file)
 
                 fibonacci.apply_async(
-                    args=[docker_img, task_weight, fib_file, experiment],
+                    args=[docker_img, task_weight, fib_file,
+                          request.json['experiment']],
                     queue=queue
                 )
                 return 'Workflow successfully launched'
             else:
                 task_weight = request.form['weight']
-                experiment = request.form['experiment']
                 queue = experiment_to_queue[request.form['experiment']]
                 input_file = request.form['input-file']
-                docker_img, fib_file = check_input_file(input_file)
+                docker_img, fib_file = check_fibonacci_workflow(input_file)
 
-                # send right away
                 fibonacci.apply_async(
-                    args=[docker_img, task_weight, fib_file, experiment],
+                    args=[docker_img, task_weight, fib_file,
+                          request.form['experiment']],
                     queue=queue
                 )
+
                 flash('Workflow successfully launched')
-                return redirect(url_for('index'))
+                return redirect(url_for('fibonacci_endpoint'))
         except (KeyError, ValueError):
             traceback.print_exc()
             abort(400)
 
 
 @app.route('/yadage', methods=['GET', 'POST'])
-def yadage():
+def yadage_endpoint():
     if request.method == 'POST':
         try:
             if request.json:
                 toplevel = request.json['toplevel']
                 workflow = request.json['workflow']
                 parameters = request.json['parameters']
-                experiment = request.json['experiment']
-                queue = experiment_to_queue[experiment]
+                queue = experiment_to_queue[request.json['experiment']]
+
                 run_yadage_workflow.apply_async(
                     args=[toplevel, workflow, parameters],
                     queue=queue

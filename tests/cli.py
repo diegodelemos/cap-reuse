@@ -1,12 +1,16 @@
 #!/usr/bin/python
 import base64
 import click
-import json
 import requests
 
 
-@click.command('fibo-experiment')
-@click.option('--url', default='http://137.138.6.43:32331/',
+@click.group(chain=True)
+def cli():
+    pass
+
+
+@cli.command()
+@click.option('--url', default='http://137.138.7.46:32331/fibonacci',
               help='API endpoint')
 @click.option('-w', '--weight', default='slow', help='Docker image')
 @click.option('-e', '--experiment', default='alice',
@@ -17,7 +21,7 @@ import requests
 @click.option('-n', default='1',
               type=click.IntRange(min=1, max=40),
               help='Number of requests')
-def all_experiments_same_data(url, weight, experiment, filename, n):
+def fibonacci(url, weight, experiment, filename, n):
     with open(click.format_filename(filename)) as f:
         input_file = f.read()
 
@@ -28,10 +32,37 @@ def all_experiments_same_data(url, weight, experiment, filename, n):
         'experiment': experiment,
         'input-file': input_file_b64
     }
-    json_string = json.dumps(data).encode()
+
     for i in range(n):
-        response = requests.post(url, json=json_string)
+        response = requests.post(url, json=data)
+        click.echo('Request {} of {}: {}'.format(i+1, n, response.text))
+
+
+@cli.command()
+@click.option('--url', default='http://137.138.7.46:32331/yadage',
+              help='API endpoint')
+@click.option('-e', '--experiment', default='alice',
+              type=click.Choice(['alice', 'atlas', 'cms', 'lhcb', 'recast']),
+              help='Experiment to address the request to')
+@click.option('-t', '--toplevel', default='toplevel', help='Toplevel')
+@click.option('-w', '--workflow', default='workflow', help='Yadage Workflow')
+@click.option('-p', '--parameters',
+              default={'param1': 'value1', 'param2': 'value2'},
+              help='Yadage Workflow')
+@click.option('-n', default='1',
+              type=click.IntRange(min=1, max=40),
+              help='Number of requests')
+def yadage(url, experiment, toplevel, workflow, parameters, n):
+    data = {
+        'experiment': experiment,
+        'toplevel': toplevel,
+        'workflow': workflow,
+        'parameters': parameters,
+    }
+
+    for i in range(n):
+        response = requests.post(url, json=data)
         click.echo('Request {} of {}: {}'.format(i+1, n, response.text))
 
 if __name__ == '__main__':
-    all_experiments_same_data()
+    cli()
