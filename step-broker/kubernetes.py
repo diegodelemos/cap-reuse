@@ -67,22 +67,24 @@ def watch_jobs(job_db):
         stream = pykube.Job.objects(api).filter(namespace=pykube.all).watch()
         for event in stream:
             job = event.object
-            if event.type == 'DELETED':
-                job_db[job.name]['pod'].delete()
-                job_db[job.name]['deleted'] = True
+            if job.name in job_db:
+                if event.type == 'DELETED':
+                    job_db[job.name]['pod'].delete()
+                    job_db[job.name]['deleted'] = True
+                    continue
 
-            unended_jobs = [j for j in job_db.keys()
-                            if not job_db[j]['deleted']]
+                unended_jobs = [j for j in job_db.keys()
+                                if not job_db[j]['deleted']]
 
-            if job.name in unended_jobs:
-                if job.obj['status'].get('succeeded'):
-                    job_db[job.name]['status'] = 'succeeded'
-                    job.delete()
+                if job.name in unended_jobs:
+                    if job.obj['status'].get('succeeded'):
+                        job_db[job.name]['status'] = 'succeeded'
+                        job.delete()
 
-                # with the current k8s implementation this is never
-                # going to happen...
-                if job.obj['status'].get('failed'):
-                    job_db[job['metadata']['name']]['status'] = 'failed'
+                    # with the current k8s implementation this is never
+                    # going to happen...
+                    elif job.obj['status'].get('failed'):
+                        job_db[job['metadata']['name']]['status'] = 'failed'
 
 
 def watch_pods(job_db):
@@ -109,10 +111,13 @@ def watch_pods(job_db):
                         job_db[job_name]['restart_count'] = res
                         if res >= job_db[job_name]['max_restart_count']\
                            and is_terminated:
+                            print('del {}'.format(pod.name))
                             job_db[job_name]['status'] = 'failed'
-                            # Remove this line when Pykube 0.14.0 is released
+                            # Replace this two lines when Pykube 0.14.0 is
+                            # released with:
+                            # job_db[job_name]['log'] = pod.logs()
+                            print(job_db)
                             pod.logs = logs
-                            # log failing right now
                             job_db[job_name]['log'] = pod.logs(pod)
                             job_db[job_name]['obj'].delete()
 

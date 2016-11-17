@@ -18,8 +18,10 @@ def filter_jobs(job_db):
     job_db_copy = copy.deepcopy(job_db)
     for job_name in job_db_copy:
         del(job_db_copy[job_name]['obj'])
-        del(job_db_copy[job_name]['pod'])
         del(job_db_copy[job_name]['deleted'])
+        if job_db_copy[job_name].get('pod'):
+            del(job_db_copy[job_name]['pod'])
+
 
     return job_db_copy
 
@@ -70,8 +72,9 @@ def get_job(job_id):
     if job_id in JOB_DB:
         job_copy = copy.deepcopy(JOB_DB[job_id])
         del(job_copy['obj'])
-        del(job_copy['pod'])
         del(job_copy['deleted'])
+        if job_copy['pod']:
+            del(job_copy['pod'])
         return jsonify({'job': job_copy}), 200
     else:
         abort(404)
