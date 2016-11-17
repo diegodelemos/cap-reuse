@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
        - name: cms-yadage-worker
-         image: diegodelemos/capreuse_yadage-worker:0.1.0
+         image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:yadage-worker
          imagePullPolicy: Always
          env:
           - name: QUEUE_ENV

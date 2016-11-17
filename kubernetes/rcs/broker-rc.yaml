@@ -10,8 +10,8 @@ spec:
         app: broker
     spec:
       containers:
-       - name: rabbitmq
-         image: diegodelemos/capreuse_broker:0.1.0
+       - name: broker
+         image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:broker
          ports:
           - containerPort: 5672 
             name: "tcp"

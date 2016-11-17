@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
        - name: flower
-         image: diegodelemos/capreuse_flower:0.1.0
+         image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:flower
          ports:
           - containerPort: 5555 
             name: "http"

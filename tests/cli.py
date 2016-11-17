@@ -10,7 +10,7 @@ def cli():
 
 
 @cli.command()
-@click.option('--url', default='http://137.138.7.46:32331/fibonacci',
+@click.option('--url', default='http://137.138.6.43:32331/fibonacci',
               help='API endpoint')
 @click.option('-w', '--weight', default='slow', help='Docker image')
 @click.option('-e', '--experiment', default='alice',
@@ -39,7 +39,7 @@ def fibonacci(url, weight, experiment, filename, n):
 
 
 @cli.command()
-@click.option('--url', default='http://137.138.7.46:32331/yadage',
+@click.option('--url', default='http://137.138.6.43:32331/yadage',
               help='API endpoint')
 @click.option('-e', '--experiment', default='alice',
               type=click.Choice(['alice', 'atlas', 'cms', 'lhcb', 'recast']),

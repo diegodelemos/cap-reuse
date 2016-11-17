@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
        - name: step-broker
-         image: diegodelemos/capreuse_step-broker:0.1.0
+         image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:step-broker
          imagePullPolicy: Always
          ports:
           - containerPort: 5000 
