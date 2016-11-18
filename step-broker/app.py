@@ -58,7 +58,7 @@ def create_job():
         job = copy.deepcopy(request.json)
         job['status'] = 'started'
         job['restart_count'] = 0
-        job['max_restart_count'] = 1
+        job['max_restart_count'] = 0
         job['obj'] = job_obj
         job['deleted'] = False
         JOB_DB[job.get('job-name')] = job

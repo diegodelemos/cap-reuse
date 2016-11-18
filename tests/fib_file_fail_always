@@ -1,5 +1,5 @@
 Fibonacci pipeline
-diegodelemos/capreuse_fibonacci:failAlways
+gitlab-registry.cern.ch/rodrigdi/cap-reuse:fibonacciFailAlways
 45236,47,8768,6989,764
 8,58,9958,56896,5689,6
 4676,5978,786,345,7788
