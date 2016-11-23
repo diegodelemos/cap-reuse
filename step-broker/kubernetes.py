@@ -11,7 +11,7 @@ def get_jobs():
             filter(namespace=pykube.all)]
 
 
-def create_job(job_name, docker_img, cmd, volume, work_dir, namespace):
+def create_job(job_name, docker_img, cmd, volumes, env_vars, namespace):
     job = {
         'kind': 'Job',
         'apiVersion': 'batch/v1',
@@ -29,32 +29,34 @@ def create_job(job_name, docker_img, cmd, volume, work_dir, namespace):
                     'containers': [
                         {
                             'name': job_name,
-                            'image': docker_img,
-                            'command': cmd,
-                            'env': [
-                                {
-                                    'name': "RANDOM_ERROR",
-                                    'value': "1"
-                                },
-                                {
-                                    'name': "WORK_DIR",
-                                    'value': work_dir
-                                }
-                            ],
-                            'volumeMounts': [
-                                {
-                                    'name': volume['name'],
-                                    'mountPath': '/data'
-                                }
-                            ]
+                            'image': docker_img
                         },
                     ],
-                    'volumes': [volume],
                     'restartPolicy': 'OnFailure'
                 }
             }
         }
     }
+
+    if cmd:
+        job['spec']['template']['spec']['containers'][0]['command'] = cmd.split()
+
+    if env_vars:
+        job['spec']['template']['spec']['containers'][0]['env'] = []
+        for var, value in env_vars.items():
+            job['spec']['template']['spec']['containers'][0]['env'].append(
+                {'name': var, 'value': value}
+            )
+
+    if volumes:
+        job['spec']['template']['spec']['containers'][0]['volumeMounts'] = []
+        job['spec']['template']['spec']['volumes'] = []
+        for volume, mount_path in volumes:
+            job['spec']['template']['spec']['containers'][0]\
+                ['volumeMounts'].append(
+                    {'name': volume['name'], 'mountPath': mount_path}
+                )
+            job['spec']['template']['spec']['volumes'].append(volume)
 
     # add better handling
     try:

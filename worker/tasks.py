@@ -41,10 +41,13 @@ def fibonacci(docker_img, cmd, task_weight, input_file, experiment):
             'job-name': job_name,
             'docker-img': docker_img,
             'cmd': cmd,
-            'work-dir': os.path.join(
-                fibonacci.request.id,
-                str(step)
-            )
+            'env-vars': {
+                'RANDOM_ERROR': '1',
+                'WORK_DIR': os.path.join(
+                    fibonacci.request.id,
+                    str(step)
+                )
+            }
         }
         print(job_spec)
         response = requests.post(

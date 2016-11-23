@@ -22,7 +22,6 @@ def filter_jobs(job_db):
         if job_db_copy[job_name].get('pod'):
             del(job_db_copy[job_name]['pod'])
 
-
     return job_db_copy
 
 
@@ -41,26 +40,29 @@ def create_job():
     if not request.json \
        or not ('experiment') in request.json\
        or not ('job-name' in request.json)\
-       or not ('docker-img' in request.json)\
-       or not ('cmd' in request.json)\
-       or not ('work-dir' in request.json):
+       or not ('docker-img' in request.json):
         print(request.json)
         abort(400)
 
+    cmd = request.json['cmd'] if 'cmd' in request.json else None
+    env_vars = request.json['env-vars'] \
+               if 'env-vars' in request.json else {}
     experiment_config = get_config(request.json['experiment'])
+
+    k8s_volume = experiment_config['k8s_volume']
 
     job_obj = kubernetes.create_job(request.json['job-name'],
                                     request.json['docker-img'],
-                                    request.json['cmd'].split(),
-                                    experiment_config['k8s_volume'],
-                                    request.json['work-dir'],
+                                    cmd,
+                                    [(k8s_volume, '/data')],
+                                    env_vars,
                                     request.json['experiment'])
 
     if job_obj:
         job = copy.deepcopy(request.json)
         job['status'] = 'started'
         job['restart_count'] = 0
-        job['max_restart_count'] = 0
+        job['max_restart_count'] = 3
         job['obj'] = job_obj
         job['deleted'] = False
         JOB_DB[job.get('job-name')] = job
