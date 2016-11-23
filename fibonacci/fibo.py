@@ -20,15 +20,17 @@ def fibo_file(input_file, output_file):
        random.randint(0, 10) < 5:
         raise ArithmeticError
 
+    print('Reading input from {}'.format(input_file))
     number_list = []
     with open(input_file, 'r') as f:
         number_list = [int(i) for i in f.read().split(',')]
 
+    print('Calculating fibonacci for:\n{}'.format(number_list))
+    result = [str(fibonacci(i)) for i in number_list]
+    print('Writing result to {}'.format(output_file))
     with open(output_file, 'w') as f:
-        f.write(str(fibonacci(number_list[0])))
-        for i in number_list[1:]:
-            f.write(",{}".format(fibonacci(i)))
-
+        f.write(','.join(result))
+    print('End of execution.')
 
 if __name__ == '__main__':
     working_directory = os.path.join('/data', os.getenv('WORK_DIR'))
