@@ -1,39 +1,38 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: fibo-atlas-worker
+  name: yadage-recast-worker
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: fibo-atlas-worker
+        app: yadage-recast-worker
     spec:
       containers:
-       - name: fibo-atlas-worker
-         image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:worker
+       - name: yadage-recast-worker
+         image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:yadage-worker
          imagePullPolicy: Always
          env:
           - name: QUEUE_ENV
-            value: "fibo-atlas-queue"
+            value: yadage-recast-queue
           - name: EXPERIMENT
-            value: "atlas"
+            value: recast
           - name: SHARED_VOLUME
-            value: "/k8s/atlas"
+            value: "/k8s/recast"
          volumeMounts:
-          - name: atlas-pv
+          - name: recast
             mountPath: "/data"
-      securityContext:
-        fsGroup: 0
       volumes:
-       - name: atlas-pv
+       - name: recast
          cephfs:
            monitors:
             - 128.142.36.227:6790
             - 128.142.39.77:6790
             - 128.142.39.144:6790
-           path: "/k8s/atlas"
+           path: "/k8s/recast"
            user: k8s
            secretRef:
              name: ceph-secret
            readOnly: false
+

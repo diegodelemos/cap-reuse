@@ -47,15 +47,15 @@ def create_job():
         print(request.json)
         abort(400)
 
-    print('creating job')
     experiment_config = get_config(request.json['experiment'])
 
     job_obj = kubernetes.create_job(request.json['job-name'],
                                     request.json['docker-img'],
                                     request.json['cmd'].split(),
                                     experiment_config['k8s_volume'],
-                                    request.json['work-dir'])
-    print('job_created')
+                                    request.json['work-dir'],
+                                    request.json['experiment'])
+
     if job_obj:
         job = copy.deepcopy(request.json)
         job['status'] = 'started'

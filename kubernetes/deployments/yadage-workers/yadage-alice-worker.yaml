@@ -1,39 +1,38 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: fibo-atlas-worker
+  name: yadage-alice-worker
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: fibo-atlas-worker
+        app: yadage-alice-worker
     spec:
       containers:
-       - name: fibo-atlas-worker
-         image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:worker
+       - name: yadage-alice-worker
+         image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:yadage-worker
          imagePullPolicy: Always
          env:
           - name: QUEUE_ENV
-            value: "fibo-atlas-queue"
+            value: yadage-alice-queue
           - name: EXPERIMENT
-            value: "atlas"
+            value: alice
           - name: SHARED_VOLUME
-            value: "/k8s/atlas"
+            value: "/k8s/alice"
          volumeMounts:
-          - name: atlas-pv
+          - name: alice
             mountPath: "/data"
-      securityContext:
-        fsGroup: 0
       volumes:
-       - name: atlas-pv
+       - name: alice
          cephfs:
            monitors:
             - 128.142.36.227:6790
             - 128.142.39.77:6790
             - 128.142.39.144:6790
-           path: "/k8s/atlas"
+           path: "/k8s/alice"
            user: k8s
            secretRef:
              name: ceph-secret
            readOnly: false
+

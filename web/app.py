@@ -59,7 +59,7 @@ def fibonacci_endpoint():
                 fibonacci.apply_async(
                     args=[docker_img, cmd, task_weight, fib_file,
                           request.json['experiment']],
-                    queue=queue
+                    queue='fibo-{}'.format(queue)
                 )
                 return 'Workflow successfully launched'
             else:
@@ -71,7 +71,7 @@ def fibonacci_endpoint():
                 fibonacci.apply_async(
                     args=[docker_img, cmd, task_weight, fib_file,
                           request.form['experiment']],
-                    queue=queue
+                    queue='fibo-{}'.format(queue)
                 )
 
                 flash('Workflow successfully launched')
@@ -93,7 +93,7 @@ def yadage_endpoint():
 
                 run_yadage_workflow.apply_async(
                     args=[toplevel, workflow, parameters],
-                    queue=queue
+                    queue='yadage-{}'.format(queue)
                 )
 
                 return 'Workflow successfully launched'

@@ -1,36 +1,36 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: cms-yadage-worker
+  name: yadage-lhcb-worker
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: cms-yadage-worker
+        app: yadage-lhcb-worker
     spec:
       containers:
-       - name: cms-yadage-worker
+       - name: yadage-lhcb-worker
          image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:yadage-worker
          imagePullPolicy: Always
          env:
           - name: QUEUE_ENV
-            value: cms-queue
+            value: yadage-lhcb-queue
           - name: EXPERIMENT
-            value: cms
+            value: lhcb
           - name: SHARED_VOLUME
-            value: "/k8s/cms"
+            value: "/k8s/lhcb"
          volumeMounts:
-          - name: cms
+          - name: lhcb
             mountPath: "/data"
       volumes:
-       - name: cms
+       - name: lhcb
          cephfs:
            monitors:
             - 128.142.36.227:6790
             - 128.142.39.77:6790
             - 128.142.39.144:6790
-           path: "/k8s/cms"
+           path: "/k8s/lhcb"
            user: k8s
            secretRef:
              name: ceph-secret

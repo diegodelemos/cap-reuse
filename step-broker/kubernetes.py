@@ -11,45 +11,46 @@ def get_jobs():
             filter(namespace=pykube.all)]
 
 
-def create_job(job_name, docker_img, cmd, volume, working_directory):
+def create_job(job_name, docker_img, cmd, volume, work_dir, namespace):
     job = {
-        "kind": "Job",
-        "apiVersion": "batch/v1",
-        "metadata": {
-            "name": job_name,
+        'kind': 'Job',
+        'apiVersion': 'batch/v1',
+        'metadata': {
+            'name': job_name,
+            'namespace': namespace
         },
-        "spec": {
-            "autoSelector": True,
-            "template": {
-                "metadata": {
-                    "name": job_name,
+        'spec': {
+            'autoSelector': True,
+            'template': {
+                'metadata': {
+                    'name': job_name
                 },
-                "spec": {
-                    "containers": [
+                'spec': {
+                    'containers': [
                         {
-                            "name": job_name,
-                            "image": docker_img,
-                            "command": cmd,
-                            "env": [
+                            'name': job_name,
+                            'image': docker_img,
+                            'command': cmd,
+                            'env': [
                                 {
-                                    "name": "RANDOM_ERROR",
-                                    "value": "1"
+                                    'name': "RANDOM_ERROR",
+                                    'value': "1"
                                 },
                                 {
-                                    "name": "WORK_DIR",
-                                    "value": working_directory
+                                    'name': "WORK_DIR",
+                                    'value': work_dir
                                 }
                             ],
-                            "volumeMounts": [
+                            'volumeMounts': [
                                 {
-                                    "name": volume['name'],
-                                    "mountPath": "/data"
+                                    'name': volume['name'],
+                                    'mountPath': '/data'
                                 }
                             ]
                         },
                     ],
-                    "volumes": [volume],
-                    "restartPolicy": "OnFailure"
+                    'volumes': [volume],
+                    'restartPolicy': 'OnFailure'
                 }
             }
         }

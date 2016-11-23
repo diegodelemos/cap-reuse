@@ -1,21 +1,21 @@
-apiVersion: v1
-kind: ReplicationController
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
-  name: lhcb-worker
+  name: fibo-lhcb-worker
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: lhcb-worker
+        app: fibo-lhcb-worker
     spec:
       containers:
-       - name: lhcb-celery-worker
-         image: diegodelemos/capreuse_worker:0.1.0
+       - name: fibo-lhcb-worker
+         image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:worker
          imagePullPolicy: Always
          env:
           - name: QUEUE_ENV
-            value: "lhcb-queue"
+            value: "fibo-lhcb-queue"
           - name: EXPERIMENT
             value: "lhcb"
           - name: SHARED_VOLUME

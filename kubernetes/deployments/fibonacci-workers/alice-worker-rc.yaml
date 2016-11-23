@@ -1,34 +1,32 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: alice-worker
+  name: fibo-alice-worker
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: alice-worker
+        app: fibo-alice-worker
     spec:
       containers:
-       - name: alice-celery-worker
+       - name: fibo-alice-worker
          image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:worker
          imagePullPolicy: Always
          env:
           - name: QUEUE_ENV
-            value: alice-queue
+            value: fibo-alice-queue
           - name: EXPERIMENT
             value: alice
           - name: SHARED_VOLUME
             value: "/k8s/alice"
          volumeMounts:
-          - name: cap-alice-pv
+          - name: alice-pv
             mountPath: "/data"
       securityContext:
         fsGroup: 0
       volumes:
-       - name: cap-alice-pv
-#         persistentVolumeClaim:
-#           claimName: cap-alice-pv
+       - name: alice-pv
          cephfs:
            monitors:
             - 128.142.36.227:6790

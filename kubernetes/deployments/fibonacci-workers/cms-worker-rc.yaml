@@ -1,21 +1,21 @@
-apiVersion: v1
-kind: ReplicationController
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
-  name: cms-worker
+  name: fibo-cms-worker
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: cms-worker
+        app: fibo-cms-worker
     spec:
       containers:
-       - name: cms-celery-worker
-         image: diegodelemos/capreuse_worker:0.1.0
+       - name: fibo-cms-worker
+         image: gitlab-registry.cern.ch/rodrigdi/cap-reuse:worker
          imagePullPolicy: Always
          env:
           - name: QUEUE_ENV
-            value: "cms-queue"
+            value: "fibo-cms-queue"
           - name: EXPERIMENT
             value: "cms"
           - name: SHARED_VOLUME
