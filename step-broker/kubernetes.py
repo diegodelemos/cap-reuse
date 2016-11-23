@@ -11,7 +11,7 @@ def get_jobs():
             filter(namespace=pykube.all)]
 
 
-def create_job(job_name, docker_img, volume, working_directory):
+def create_job(job_name, docker_img, cmd, volume, working_directory):
     job = {
         "kind": "Job",
         "apiVersion": "batch/v1",
@@ -29,6 +29,7 @@ def create_job(job_name, docker_img, volume, working_directory):
                         {
                             "name": job_name,
                             "image": docker_img,
+                            "command": cmd,
                             "env": [
                                 {
                                     "name": "RANDOM_ERROR",

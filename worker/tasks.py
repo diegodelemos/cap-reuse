@@ -9,7 +9,7 @@ API_VERSION = 'api/v1.0'
 
 
 @app.task(name='tasks.fibonacci', ignore_result=True)
-def fibonacci(docker_img, task_weight, input_file, experiment):
+def fibonacci(docker_img, cmd, task_weight, input_file, experiment):
     print '\nRunning the following workflow:\n'\
           'Docker image: {0}\n'\
           'Weight: {1}\n'\
@@ -28,14 +28,8 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
 
         input_file_name = os.path.join(step_dir, 'input.dat')
 
-        while True:
-            try:
-                with open(input_file_name, 'w') as f:
-                    f.write(line)
-                    break
-            except IOError:
-                print('Retrying to write {}'.format(input_file_name))
-                continue
+        with open(input_file_name, 'w') as f:
+            f.write(line)
 
         job_name = '{}-{}'.format(fibonacci.request.id, step)
         jobs_list.append(job_name)
@@ -43,10 +37,11 @@ def fibonacci(docker_img, task_weight, input_file, experiment):
         # Call step-broker api to launch job
 
         job_spec = {
-            "experiment": os.getenv('EXPERIMENT'),
-            "job-name": job_name,
-            "docker-img": docker_img,
-            "work-dir": os.path.join(
+            'experiment': os.getenv('EXPERIMENT'),
+            'job-name': job_name,
+            'docker-img': docker_img,
+            'cmd': cmd,
+            'work-dir': os.path.join(
                 fibonacci.request.id,
                 str(step)
             )

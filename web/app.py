@@ -27,8 +27,8 @@ def check_fibonacci_workflow(input_file):
         # lines[2] which is the docker image should
         # be checked but since this is a proof of
         # concept we suppose that it exists.
-        for pos, line in enumerate(lines[2:]):
-            lines[pos+2] = lines[pos+2].strip()
+        for pos, line in enumerate(lines[3:]):
+            lines[pos+3] = lines[pos+3].strip()
             tmp_nums = []
             for num in line.split(','):
                 tmp_nums.append(int(num))
@@ -39,7 +39,7 @@ def check_fibonacci_workflow(input_file):
             tmp_nums.append(int(num))
         nums.append(tmp_nums)
 
-    return lines[1], '\n'.join(lines[2:])
+    return lines[1], lines[2], '\n'.join(lines[3:])
 
 
 @app.route('/fibonacci', methods=['GET', 'POST'])
@@ -54,10 +54,10 @@ def fibonacci_endpoint():
                 task_weight = request.json['weight']
                 queue = experiment_to_queue[request.json['experiment']]
                 input_file = base64.decodestring(request.json['input-file'])
-                docker_img, fib_file = check_fibonacci_workflow(input_file)
+                docker_img, cmd, fib_file = check_fibonacci_workflow(input_file)
 
                 fibonacci.apply_async(
-                    args=[docker_img, task_weight, fib_file,
+                    args=[docker_img, cmd, task_weight, fib_file,
                           request.json['experiment']],
                     queue=queue
                 )
@@ -66,10 +66,10 @@ def fibonacci_endpoint():
                 task_weight = request.form['weight']
                 queue = experiment_to_queue[request.form['experiment']]
                 input_file = request.form['input-file']
-                docker_img, fib_file = check_fibonacci_workflow(input_file)
+                docker_img, cmd, fib_file = check_fibonacci_workflow(input_file)
 
                 fibonacci.apply_async(
-                    args=[docker_img, task_weight, fib_file,
+                    args=[docker_img, cmd, task_weight, fib_file,
                           request.form['experiment']],
                     queue=queue
                 )

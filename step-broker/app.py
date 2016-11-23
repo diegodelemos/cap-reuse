@@ -42,6 +42,7 @@ def create_job():
        or not ('experiment') in request.json\
        or not ('job-name' in request.json)\
        or not ('docker-img' in request.json)\
+       or not ('cmd' in request.json)\
        or not ('work-dir' in request.json):
         print(request.json)
         abort(400)
@@ -51,6 +52,7 @@ def create_job():
 
     job_obj = kubernetes.create_job(request.json['job-name'],
                                     request.json['docker-img'],
+                                    request.json['cmd'].split(),
                                     experiment_config['k8s_volume'],
                                     request.json['work-dir'])
     print('job_created')
