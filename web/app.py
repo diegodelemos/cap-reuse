@@ -39,7 +39,7 @@ def check_fibonacci_workflow(input_file):
             tmp_nums.append(int(num))
         nums.append(tmp_nums)
 
-    return lines[1], lines[2], '\n'.join(lines[3:])
+    return lines[1].strip(), lines[2].strip(), '\n'.join(lines[3:])
 
 
 @app.route('/fibonacci', methods=['GET', 'POST'])
@@ -54,7 +54,9 @@ def fibonacci_endpoint():
                 task_weight = request.json['weight']
                 queue = experiment_to_queue[request.json['experiment']]
                 input_file = base64.decodestring(request.json['input-file'])
-                docker_img, cmd, fib_file = check_fibonacci_workflow(input_file)
+                docker_img, cmd, fib_file = check_fibonacci_workflow(
+                    input_file
+                )
 
                 fibonacci.apply_async(
                     args=[docker_img, cmd, task_weight, fib_file,
@@ -66,7 +68,9 @@ def fibonacci_endpoint():
                 task_weight = request.form['weight']
                 queue = experiment_to_queue[request.form['experiment']]
                 input_file = request.form['input-file']
-                docker_img, cmd, fib_file = check_fibonacci_workflow(input_file)
+                docker_img, cmd, fib_file = check_fibonacci_workflow(
+                    input_file
+                )
 
                 fibonacci.apply_async(
                     args=[docker_img, cmd, task_weight, fib_file,
