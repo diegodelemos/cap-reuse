@@ -1,5 +1,6 @@
 import copy
 import json
+import logging
 import threading
 from flask import Flask, abort, jsonify, request
 import kubernetes
@@ -45,8 +46,8 @@ def create_job():
         abort(400)
 
     cmd = request.json['cmd'] if 'cmd' in request.json else None
-    env_vars = request.json['env-vars'] \
-               if 'env-vars' in request.json else {}
+    env_vars = (request.json['env-vars']
+                if 'env-vars' in request.json else {})
     experiment_config = get_config(request.json['experiment'])
 
     k8s_volume = experiment_config['k8s_volume']
@@ -85,6 +86,10 @@ def get_job(job_id):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(threadName)s - %(levelname)s: %(message)s'
+    )
     job_event_reader_thread = threading.Thread(target=kubernetes.watch_jobs,
                                                args=(JOB_DB,))
     job_event_reader_thread.start()
