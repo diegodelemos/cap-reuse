@@ -74,7 +74,7 @@ def watch_jobs(job_db):
         logging.debug('Starting a new stream request to watch Jobs')
         stream = pykube.Job.objects(api).filter(namespace=pykube.all).watch()
         for event in stream:
-            logging.debug('New Job event received')
+            logging.info('New Job event received')
             job = event.object
             unended_jobs = [j for j in job_db.keys()
                             if not job_db[j]['deleted']]
@@ -82,17 +82,17 @@ def watch_jobs(job_db):
             if job.name in unended_jobs and event.type == 'DELETED':
                 while not job_db[job.name].get('pod'):
                     time.sleep(5)
-                    logging.debug(
+                    logging.warn(
                         'Job {} Pod still not known'.format(job.name)
                     )
                 while job.exists():
-                    logging.debug(
+                    logging.warn(
                         'Waiting for Job {} to be cleaned'.format(
                             job.name
                         )
                     )
                     time.sleep(5)
-                logging.debug(
+                logging.info(
                     'Deleting {}\'s pod -> {}'.format(
                         job.name, job_db[job.name]['pod'].name
                     )
@@ -102,7 +102,7 @@ def watch_jobs(job_db):
 
             elif (job.name in unended_jobs and
                   job.obj['status'].get('succeeded')):
-                logging.debug(
+                logging.info(
                     'Job {} successfuly ended. Cleaning...'.format(job.name)
                 )
                 job_db[job.name]['status'] = 'succeeded'
@@ -111,17 +111,17 @@ def watch_jobs(job_db):
             # with the current k8s implementation this is never
             # going to happen...
             elif job.name in unended_jobs and job.obj['status'].get('failed'):
-                logging.debug('Job {} failed. Cleaning...'.format(job.name))
+                logging.info('Job {} failed. Cleaning...'.format(job.name))
                 job_db[job['metadata']['name']]['status'] = 'failed'
                 job.delete()
 
 
 def watch_pods(job_db):
     while True:
-        logging.debug('Starting a new stream request to watch Pods')
+        logging.info('Starting a new stream request to watch Pods')
         stream = pykube.Pod.objects(api).filter(namespace=pykube.all).watch()
         for event in stream:
-            logging.debug('New Pod event received')
+            logging.info('New Pod event received')
             pod = event.object
             unended_jobs = [j for j in job_db.keys()
                             if not job_db[j]['deleted']
@@ -132,7 +132,7 @@ def watch_pods(job_db):
             # Store existing job pod if not done yet
             if job_name in job_db and not job_db[job_name].get('pod'):
                 # Store job's pod
-                logging.debug(
+                logging.info(
                     'Storing {} as Job {} Pod'.format(pod.name, job_name)
                 )
                 job_db[job_name]['pod'] = pod
@@ -145,12 +145,12 @@ def watch_pods(job_db):
                                  ['containerStatuses'][0]
                                  ['state'].get('terminated', {})
                                  .get('exitCode'))
-                    logging.debug(
+                    logging.info(
                         pod.obj['status']['containerStatuses'][0]['state'].
                         get('terminated', {})
                     )
 
-                    logging.debug(
+                    logging.info(
                         'Updating Pod {} restarts to {}'.format(
                             pod.name, restarts
                         )
@@ -158,26 +158,20 @@ def watch_pods(job_db):
 
                     job_db[job_name]['restart_count'] = restarts
 
-                    logging.debug(
-                        'exit_code value {} and type {}'.format(
-                            exit_code, type(exit_code)
-                        )
-                    )
-
                     if restarts >= job_db[job_name]['max_restart_count'] and \
                        exit_code == 1:
 
-                        logging.debug(
+                        logging.info(
                             'Job {} reached max restarts...'.format(job_name)
                         )
 
-                        logging.debug(
+                        logging.info(
                             'Getting {} logs'.format(pod.name)
                         )
                         # Remove when Pykube 0.14.0 is released
                         pod.logs = logs
                         job_db[job_name]['log'] = pod.logs(pod)
-                        logging.debug(
+                        logging.info(
                             'Cleaning Job {}'.format(job_name)
                         )
                         job_db[job_name]['status'] = 'failed'
