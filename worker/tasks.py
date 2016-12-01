@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import os
+import time
 import requests
 from worker.celery import app
 
@@ -18,7 +19,10 @@ def fibonacci(docker_img, cmd, task_weight, input_file, experiment):
               docker_img, task_weight, input_file, os.getenv('EXPERIMENT')
           )
 
-    workflow_dir = os.path.join('/data', fibonacci.request.id)
+    # Let Celery task id be the Workflow id
+    workflow_id = fibonacci.request.id
+
+    workflow_dir = os.path.join('/data', workflow_id)
     jobs_list = []
 
     for step, line in enumerate(input_file.split('\n')):
@@ -28,25 +32,21 @@ def fibonacci(docker_img, cmd, task_weight, input_file, experiment):
 
         input_file_name = os.path.join(step_dir, 'input.dat')
 
+        # The Workflow controller writes input data for starting workflow.
         with open(input_file_name, 'w') as f:
             f.write(line)
 
-        job_name = '{}-{}'.format(fibonacci.request.id, step)
-        jobs_list.append(job_name)
+        work_dir = os.path.join(workflow_id, str(step))
+
         # launch a job per line
         # Call step-broker api to launch job
-
         job_spec = {
             'experiment': os.getenv('EXPERIMENT'),
-            'job-name': job_name,
             'docker-img': docker_img,
             'cmd': cmd,
             'env-vars': {
                 'RANDOM_ERROR': '1',
-                'WORK_DIR': os.path.join(
-                    fibonacci.request.id,
-                    str(step)
-                )
+                'WORK_DIR': work_dir
             }
         }
         print(job_spec)
@@ -61,7 +61,8 @@ def fibonacci(docker_img, cmd, task_weight, input_file, experiment):
         )
 
         if response.status_code == 201:
-            print 'Job {} sucessfully created'.format(job_name)
+            jobs_list.append(str(response.json()[u'job-id']))
+            print 'Job {} sucessfully created'.format(jobs_list[-1])
         else:
             print 'Error while trying to create job'
             print response.text

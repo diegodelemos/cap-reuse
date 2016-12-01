@@ -12,24 +12,24 @@ def get_jobs():
             filter(namespace=pykube.all)]
 
 
-def create_job(job_name, docker_img, cmd, volumes, env_vars, namespace):
+def create_job(job_id, docker_img, cmd, volumes, env_vars, namespace):
     job = {
         'kind': 'Job',
         'apiVersion': 'batch/v1',
         'metadata': {
-            'name': job_name,
+            'name': job_id,
             'namespace': namespace
         },
         'spec': {
             'autoSelector': True,
             'template': {
                 'metadata': {
-                    'name': job_name
+                    'name': job_id
                 },
                 'spec': {
                     'containers': [
                         {
-                            'name': job_name,
+                            'name': job_id,
                             'image': docker_img
                         },
                     ],

@@ -2,6 +2,7 @@ import copy
 import json
 import logging
 import threading
+import uuid
 from flask import Flask, abort, jsonify, request
 import kubernetes
 
@@ -40,7 +41,6 @@ def get_k8sjobs():
 def create_job():
     if not request.json \
        or not ('experiment') in request.json\
-       or not ('job-name' in request.json)\
        or not ('docker-img' in request.json):
         print(request.json)
         abort(400)
@@ -52,7 +52,9 @@ def create_job():
 
     k8s_volume = experiment_config['k8s_volume']
 
-    job_obj = kubernetes.create_job(request.json['job-name'],
+    job_id = str(uuid.uuid4())
+
+    job_obj = kubernetes.create_job(job_id,
                                     request.json['docker-img'],
                                     cmd,
                                     [(k8s_volume, '/data')],
@@ -61,13 +63,14 @@ def create_job():
 
     if job_obj:
         job = copy.deepcopy(request.json)
+        job['job-id'] = job_id
         job['status'] = 'started'
         job['restart_count'] = 0
         job['max_restart_count'] = 3
         job['obj'] = job_obj
         job['deleted'] = False
-        JOB_DB[job.get('job-name')] = job
-        return jsonify({'job': request.json}), 201
+        JOB_DB[job_id] = job
+        return jsonify({'job-id': job_id}), 201
     else:
         return jsonify({'job': 'Could not be allocated'}), 500
 
