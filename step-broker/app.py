@@ -81,7 +81,7 @@ def get_job(job_id):
         job_copy = copy.deepcopy(JOB_DB[job_id])
         del(job_copy['obj'])
         del(job_copy['deleted'])
-        if job_copy['pod']:
+        if job_copy.get('pod'):
             del(job_copy['pod'])
         return jsonify({'job': job_copy}), 200
     else:
