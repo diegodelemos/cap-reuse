@@ -39,9 +39,10 @@ def create_job(job_id, docker_img, cmd, volumes, env_vars, namespace):
         }
     }
 
+    import shlex
     if cmd:
         (job['spec']['template']['spec']['containers']
-         [0]['command']) = cmd.split()
+         [0]['command']) = shlex.split(cmd)
 
     if env_vars:
         job['spec']['template']['spec']['containers'][0]['env'] = []
