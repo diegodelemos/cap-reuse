@@ -4,7 +4,7 @@ import logging
 import threading
 import uuid
 from flask import Flask, abort, jsonify, request
-import kubernetes
+import k8s
 
 app = Flask(__name__)
 app.secret_key = "mega secret key"
@@ -34,7 +34,7 @@ def get_jobs():
 
 @app.route('/api/v1.0/k8sjobs', methods=['GET'])
 def get_k8sjobs():
-    return jsonify({"jobs": kubernetes.get_jobs()}), 200
+    return jsonify({"jobs": k8s.get_jobs()}), 200
 
 
 @app.route('/api/v1.0/jobs', methods=['POST'])
@@ -54,7 +54,7 @@ def create_job():
 
     job_id = str(uuid.uuid4())
 
-    job_obj = kubernetes.create_job(job_id,
+    job_obj = k8s.create_job(job_id,
                                     request.json['docker-img'],
                                     cmd,
                                     [(k8s_volume, '/data')],
@@ -93,10 +93,10 @@ if __name__ == '__main__':
         level=logging.DEBUG,
         format='%(asctime)s - %(threadName)s - %(levelname)s: %(message)s'
     )
-    job_event_reader_thread = threading.Thread(target=kubernetes.watch_jobs,
+    job_event_reader_thread = threading.Thread(target=k8s.watch_jobs,
                                                args=(JOB_DB,))
     job_event_reader_thread.start()
-    pod_event_reader_thread = threading.Thread(target=kubernetes.watch_pods,
+    pod_event_reader_thread = threading.Thread(target=k8s.watch_pods,
                                                args=(JOB_DB,))
     pod_event_reader_thread.start()
     app.run(debug=True, port=5000,
