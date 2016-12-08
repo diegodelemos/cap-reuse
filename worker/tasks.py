@@ -2,30 +2,13 @@ from __future__ import absolute_import
 
 import os
 import time
-import requests
+import worker.job_api as japi
 from worker.celery import app
 
 
-API_VERSION = 'api/v1.0'
-
-
-@app.task(name='tasks.fibonacci', ignore_result=True)
-def fibonacci(docker_img, cmd, task_weight, input_file, experiment):
-    print '\nRunning the following workflow:\n'\
-          'Docker image: {0}\n'\
-          'Weight: {1}\n'\
-          'Infraestructure: {3}\n'\
-          'Workflow steps:\n{2}'.format(
-              docker_img, task_weight, input_file, os.getenv('EXPERIMENT')
-          )
-
-    # Let Celery task id be the Workflow id
-    workflow_id = fibonacci.request.id
-
-    workflow_dir = os.path.join('/data', workflow_id)
-    jobs = {}
-
-    for step, line in enumerate(input_file.split('\n')):
+@app.task
+def run_jobs(lines, workflow_dir, workflow_id, docker_img, cmd, jobs):
+    for step, line in enumerate(lines):
         step_dir = os.path.join(workflow_dir, str(step))
         if not os.path.exists(step_dir):
             os.makedirs(step_dir)
@@ -49,25 +32,18 @@ def fibonacci(docker_img, cmd, task_weight, input_file, experiment):
                 'WORK_DIR': work_dir
             }
         }
-        print(job_spec)
-        response = requests.post(
-            'http://{host}/{api}/{resource}'.format(
-                host='step-broker-service.default.svc.cluster.local',
-                api=API_VERSION,
-                resource='jobs'
-            ),
-            json=job_spec,
-            headers={'content-type': 'application/json'}
-        )
 
-        if response.status_code == 201:
-            job_id = str(response.json()['job-id'])
+        try:
+            job_id = japi.create_job(job_spec)
             jobs[job_id] = {'status': 'started'}
-            print 'Job {} sucessfully created'.format(job_id)
-        else:
-            print 'Error while trying to create job'
-            print response.text
+            print('Job {} sucessfully created'.format(job_id))
+        except Exception, e:
+            print('Error while trying to create job')
+            print(e)
 
+
+@app.task
+def get_failed_jobs(jobs):
     # Polling for retrieving workflow's steps status
     for job_id, job in jobs.items():
         retries = 0
@@ -79,26 +55,36 @@ def fibonacci(docker_img, cmd, task_weight, input_file, experiment):
                 )
             )
             time.sleep(timeout)
-            response = requests.get(
-                'http://{host}/{api}/{resource}/{id}'.format(
-                    host='step-broker-service.default.svc.cluster.local',
-                    api=API_VERSION,
-                    resource='jobs',
-                    id=job_id))
 
-            if response.status_code == 200:
-                job = response.json()['job']
+            try:
+                job = japi.get_job(job_id)
                 jobs[job_id] = job
-            else:
-                print 'Error while retrieving job {}'.format(job_id)
-                print response.text
+            except Exception, e:
+                print('Error while retrieving job {}'.format(job_id))
+                print(e)
+                break
 
             retries += 1
 
         print('Job {id} --> {status}.'.format(id=job_id, status=job['status']))
 
-    failed_jobs = [failed_job for failed_job in jobs.values()
-                   if failed_job['status'] == 'failed']
+    return [failed_job for failed_job in jobs.values()
+            if failed_job['status'] == 'failed']
+
+
+@app.task(name='tasks.fibonacci', ignore_result=True)
+def fibonacci(docker_img, cmd, task_weight, input_file, experiment):
+
+    # Let Celery task id be the Workflow id
+    workflow_id = fibonacci.request.id
+
+    workflow_dir = os.path.join('/data', workflow_id)
+    jobs = {}
+
+    run_jobs(input_file.split('\n'), workflow_dir,
+             workflow_id, docker_img, cmd, jobs)
+
+    failed_jobs = get_failed_jobs(jobs)
 
     if not failed_jobs:
         print('Workflow {} successfuly completed'.format(workflow_id))
